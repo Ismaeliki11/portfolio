@@ -49,7 +49,7 @@ export function Navbar() {
                 style={{
                     backgroundColor: navBackground,
                     backdropFilter: navBlur,
-                    webkitBackdropFilter: navBlur,
+                    WebkitBackdropFilter: navBlur,
                     borderColor: navBorder,
                 }}
                 initial={{ y: 100, opacity: 0 }}
