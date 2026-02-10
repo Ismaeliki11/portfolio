@@ -42,8 +42,11 @@ type LiquidGlassSceneProps = {
   localeBurst?: LocaleBurst | null;
 };
 
-function createStars(width: number, height: number) {
-  const count = Math.max(140, Math.min(320, Math.floor((width * height) / 6200)));
+function createStars(width: number, height: number, isCoarsePointer: boolean) {
+  const minCount = isCoarsePointer ? 90 : 140;
+  const maxCount = isCoarsePointer ? 220 : 320;
+  const density = isCoarsePointer ? 7800 : 6200;
+  const count = Math.max(minCount, Math.min(maxCount, Math.floor((width * height) / density)));
   const stars: Star[] = [];
 
   for (let index = 0; index < count; index += 1) {
@@ -78,6 +81,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     active: false,
     intensity: 0,
   });
+  const coarsePointerRef = useRef(false);
   const sizeRef = useRef({ width: 0, height: 0 });
   const previousSectionRef = useRef<string | undefined>(undefined);
   const warpEnergyRef = useRef(0);
@@ -168,6 +172,13 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     let dpr = 1;
     let frameId = 0;
     let previousTime = performance.now();
+    const pointerMode = window.matchMedia("(pointer: coarse)");
+    const syncPointerMode = () => {
+      coarsePointerRef.current = pointerMode.matches;
+      if (coarsePointerRef.current) {
+        pointerPresence.set(0.58);
+      }
+    };
 
     const resize = () => {
       width = window.innerWidth;
@@ -181,7 +192,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       canvas.style.height = `${height}px`;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      starsRef.current = createStars(width, height);
+      starsRef.current = createStars(width, height, coarsePointerRef.current);
       pointerRef.current.x = width * 0.5;
       pointerRef.current.y = height * 0.5;
       pointerX.set(width * 0.5);
@@ -200,7 +211,43 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
 
     const onPointerLeave = () => {
       pointerRef.current.active = false;
-      pointerPresence.set(0);
+      pointerPresence.set(coarsePointerRef.current ? 0.58 : 0);
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+
+      pointerRef.current.x = touch.clientX;
+      pointerRef.current.y = touch.clientY;
+      pointerRef.current.active = true;
+
+      pointerX.set(touch.clientX);
+      pointerY.set(touch.clientY);
+      pointerPresence.set(1);
+      warpEnergyRef.current = Math.max(warpEnergyRef.current, 0.72);
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+
+      pointerRef.current.x = touch.clientX;
+      pointerRef.current.y = touch.clientY;
+      pointerRef.current.active = true;
+
+      pointerX.set(touch.clientX);
+      pointerY.set(touch.clientY);
+      pointerPresence.set(1);
+    };
+
+    const onTouchEnd = () => {
+      pointerRef.current.active = false;
+      pointerPresence.set(coarsePointerRef.current ? 0.58 : 0);
     };
 
     const drawFrame = (time: number) => {
@@ -214,8 +261,20 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       const centerX = width * 0.5;
       const centerY = height * 0.5;
       const burst = burstRef.current;
+      const coarsePointer = coarsePointerRef.current;
 
-      pointer.intensity += ((pointer.active ? 1 : 0) - pointer.intensity) * 0.075 * delta;
+      if (!pointer.active && coarsePointer) {
+        const autoX = centerX + Math.cos(time * 0.00023) * width * 0.2;
+        const autoY = centerY + Math.sin(time * 0.00029) * height * 0.16;
+        pointer.x += (autoX - pointer.x) * 0.042 * delta;
+        pointer.y += (autoY - pointer.y) * 0.042 * delta;
+        pointerX.set(pointer.x);
+        pointerY.set(pointer.y);
+        pointerPresence.set(0.58);
+      }
+
+      const targetIntensity = pointer.active ? 1 : coarsePointer ? 0.42 : 0;
+      pointer.intensity += (targetIntensity - pointer.intensity) * 0.075 * delta;
       warpEnergyRef.current = Math.max(0, warpEnergyRef.current * 0.9 - 0.002 * delta);
       const warpEnergy = warpEnergyRef.current;
 
@@ -363,10 +422,21 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       frameId = window.requestAnimationFrame(drawFrame);
     };
 
+    syncPointerMode();
+    if (typeof pointerMode.addEventListener === "function") {
+      pointerMode.addEventListener("change", syncPointerMode);
+    } else {
+      pointerMode.addListener(syncPointerMode);
+    }
+
     resize();
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerleave", onPointerLeave);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("blur", onPointerLeave);
 
     frameId = window.requestAnimationFrame(drawFrame);
@@ -376,7 +446,16 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("blur", onPointerLeave);
+      if (typeof pointerMode.removeEventListener === "function") {
+        pointerMode.removeEventListener("change", syncPointerMode);
+      } else {
+        pointerMode.removeListener(syncPointerMode);
+      }
     };
   }, [pointerPresence, pointerX, pointerY]);
 

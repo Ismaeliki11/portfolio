@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { CommandPalette } from "@/components/command-palette";
 import { FloatingDock } from "@/components/floating-dock";
 import { LiquidGlassScene } from "@/components/liquid-glass-scene";
@@ -141,10 +141,8 @@ type OrbitBubbleProps = {
 function OrbitBubble({ skill, x, y, scale, glow }: OrbitBubbleProps) {
   return (
     <motion.div
-      className="glass-card absolute left-1/2 top-1/2 w-[102px] rounded-full px-3 py-1 text-center text-[11px] font-semibold tracking-[0.12em] text-[#e3eeff] uppercase"
+      className="glass-card absolute left-1/2 top-1/2 w-[88px] -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-center text-[10px] font-semibold tracking-[0.12em] text-[#e3eeff] uppercase sm:w-[102px] sm:px-3 sm:text-[11px]"
       style={{
-        marginLeft: "-51px",
-        marginTop: "-16px",
         boxShadow: `0 0 ${10 + glow * 24}px rgba(137, 228, 255, ${glow})`,
       }}
       initial={{ opacity: 0, x: x * 0.8, y: y * 0.8, scale: 0.86 }}
@@ -165,18 +163,61 @@ type SkillReactorProps = {
 };
 
 function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
+  const reactorRef = useRef<HTMLDivElement>(null);
+  const [reactorSize, setReactorSize] = useState(420);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
   const [pointer, setPointer] = useState<SkillPointer>({ x: 0, y: 0, active: false });
+  const outerRadius = Math.max(88, Math.min(148, reactorSize * 0.36));
+  const innerRadius = Math.max(66, Math.min(108, reactorSize * 0.27));
+
+  useEffect(() => {
+    const element = reactorRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width) {
+        setReactorSize(width);
+      }
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const pointerMode = window.matchMedia("(pointer: coarse)");
+    const syncPointerMode = () => setIsCoarsePointer(pointerMode.matches);
+
+    syncPointerMode();
+    if (typeof pointerMode.addEventListener === "function") {
+      pointerMode.addEventListener("change", syncPointerMode);
+    } else {
+      pointerMode.addListener(syncPointerMode);
+    }
+
+    return () => {
+      if (typeof pointerMode.removeEventListener === "function") {
+        pointerMode.removeEventListener("change", syncPointerMode);
+      } else {
+        pointerMode.removeListener(syncPointerMode);
+      }
+    };
+  }, []);
+
   const orbitPoints = useMemo(
     () =>
       orbitSkills.map((skill, index) => {
         const angle = (index / orbitSkills.length) * Math.PI * 2;
-        const radius = index % 2 === 0 ? 148 : 108;
+        const radius = index % 2 === 0 ? outerRadius : innerRadius;
         const x = Math.cos(angle) * radius;
         const y = Math.sin(angle) * radius;
 
         return { skill, x, y };
       }),
-    [orbitSkills],
+    [innerRadius, orbitSkills, outerRadius],
   );
   const bubblePoints = useMemo(
     () =>
@@ -228,17 +269,42 @@ function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
 
   const coreShiftX = pointer.active ? pointer.x * 0.1 : 0;
   const coreShiftY = pointer.active ? pointer.y * 0.1 : 0;
+  const setPointerFromEvent = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - bounds.left - bounds.width / 2;
+    const y = event.clientY - bounds.top - bounds.height / 2;
+    setPointer({ x, y, active: true });
+  };
+  const resetPointer = () => setPointer({ x: 0, y: 0, active: false });
 
   return (
     <div
-      className="glass-card relative isolate mx-auto flex aspect-square w-full max-w-[420px] items-center justify-center overflow-hidden rounded-[2rem] p-8"
-      onPointerMove={(event) => {
-        const bounds = event.currentTarget.getBoundingClientRect();
-        const x = event.clientX - bounds.left - bounds.width / 2;
-        const y = event.clientY - bounds.top - bounds.height / 2;
-        setPointer({ x, y, active: true });
+      ref={reactorRef}
+      className="glass-card relative isolate mx-auto flex aspect-square w-full max-w-[420px] items-center justify-center overflow-hidden rounded-[2rem] p-5 sm:p-7 md:p-8"
+      onPointerDown={(event) => {
+        if (event.pointerType === "touch") {
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          } catch {
+            // Pointer capture is optional and may fail on some touch browsers.
+          }
+        }
+        setPointerFromEvent(event);
       }}
-      onPointerLeave={() => setPointer({ x: 0, y: 0, active: false })}
+      onPointerMove={(event) => {
+        if (isCoarsePointer && event.pointerType === "touch" && event.buttons === 0) {
+          return;
+        }
+        setPointerFromEvent(event);
+      }}
+      onPointerUp={resetPointer}
+      onPointerCancel={resetPointer}
+      onLostPointerCapture={resetPointer}
+      onPointerLeave={() => {
+        if (!isCoarsePointer) {
+          resetPointer();
+        }
+      }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(125,217,255,0.22),transparent_65%)]" />
       <motion.div
@@ -326,6 +392,8 @@ export function PortfolioExperience() {
       return;
     }
 
+    const isCompactViewport = window.matchMedia("(max-width: 768px)").matches;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -338,8 +406,8 @@ export function PortfolioExperience() {
         });
       },
       {
-        threshold: 0.52,
-        rootMargin: "-24% 0px -24% 0px",
+        threshold: isCompactViewport ? 0.36 : 0.52,
+        rootMargin: isCompactViewport ? "-16% 0px -40% 0px" : "-24% 0px -24% 0px",
       },
     );
 
@@ -365,7 +433,7 @@ export function PortfolioExperience() {
 
   return (
     <SmoothScroll>
-      <div className="relative isolate pb-32">
+      <div className="relative isolate pb-40 md:pb-32">
         <LiquidGlassScene activeSection={activeSection} localeBurst={localeBurst} />
         <CommandPalette locale={locale} copy={copy.commandPalette} />
 
@@ -377,12 +445,12 @@ export function PortfolioExperience() {
             exit={{ opacity: 0.35, y: -8, scale: 0.998, filter: "blur(6px)" }}
             transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           >
-            <header className="section-shell sticky top-0 z-30 mt-6">
-              <div className="glass-card flex items-center justify-between rounded-full px-4 py-2 md:px-6">
-                <a href="#hero" className="text-sm font-semibold tracking-[0.18em] text-[#deecff] uppercase">
+            <header className="section-shell sticky top-2 z-30 mt-3 md:top-0 md:mt-6">
+              <div className="glass-card flex items-center justify-between rounded-full px-3 py-2 sm:px-4 md:px-6">
+                <a href="#hero" className="text-xs font-semibold tracking-[0.18em] text-[#deecff] uppercase sm:text-sm">
                   {copy.header.brand}
                 </a>
-                <div className="flex items-center gap-3 md:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                   <div className="hidden items-center gap-3 text-[11px] font-medium tracking-[0.18em] text-[#9cb2d8] uppercase md:flex">
                     <span className="h-2 w-2 rounded-full bg-[#83ffd6] shadow-[0_0_12px_#83ffd6]" />
                     {copy.header.availability}
@@ -392,28 +460,33 @@ export function PortfolioExperience() {
               </div>
             </header>
 
-            <main className="relative z-10 mt-8 space-y-24 pb-28">
-              <section id="hero" className="section-shell liquid-grain overflow-hidden rounded-[2.4rem] px-6 py-14 md:px-10 md:py-18">
+            <main className="relative z-10 mt-6 space-y-16 pb-32 sm:mt-8 md:space-y-24 md:pb-28">
+              <section
+                id="hero"
+                className="section-shell liquid-grain scroll-mt-28 overflow-hidden rounded-[2rem] px-5 py-11 sm:px-6 sm:py-14 md:scroll-mt-32 md:rounded-[2.4rem] md:px-10 md:py-18"
+              >
                 <div className="aura pulse-glow left-[-8rem] top-[-8rem]" />
-                <div className="grid gap-12 md:grid-cols-[1.1fr_0.9fr] md:items-end">
+                <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-end md:gap-12">
                   <Reveal>
                     <p className="text-xs font-semibold tracking-[0.28em] text-[#8ea7d4] uppercase">{copy.hero.kicker}</p>
-                    <h1 className="mt-5 text-5xl font-semibold text-[#f5f9ff] sm:text-6xl md:text-7xl">
+                    <h1 className="mt-4 pb-[0.06em] text-4xl leading-[1.12] font-semibold text-[#f5f9ff] sm:text-5xl sm:leading-[1.1] md:mt-5 md:text-7xl md:leading-[1.05]">
                       {copy.hero.titleTop}
                       <br />
                       {copy.hero.titleBottom}
                     </h1>
-                    <p className="text-muted mt-6 max-w-xl text-base leading-relaxed md:text-lg">{copy.hero.description}</p>
-                    <div className="mt-10 flex flex-wrap gap-3">
+                    <p className="text-muted mt-5 max-w-xl text-sm leading-relaxed sm:text-base md:mt-6 md:text-lg">
+                      {copy.hero.description}
+                    </p>
+                    <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap">
                       <a
                         href="#projects"
-                        className="rounded-full bg-gradient-to-r from-[#7ce1ff] via-[#8cfad4] to-[#96b4ff] px-6 py-3 text-sm font-semibold tracking-[0.08em] text-[#061629] uppercase"
+                        className="rounded-full bg-gradient-to-r from-[#7ce1ff] via-[#8cfad4] to-[#96b4ff] px-6 py-3 text-center text-sm font-semibold tracking-[0.08em] text-[#061629] uppercase"
                       >
                         {copy.hero.ctaPrimary}
                       </a>
                       <a
                         href="#contact"
-                        className="glass-card rounded-full px-6 py-3 text-sm font-semibold tracking-[0.08em] text-[#d7e6ff] uppercase"
+                        className="glass-card rounded-full px-6 py-3 text-center text-sm font-semibold tracking-[0.08em] text-[#d7e6ff] uppercase"
                       >
                         {copy.hero.ctaSecondary}
                       </a>
@@ -422,30 +495,40 @@ export function PortfolioExperience() {
 
                   <Reveal delay={0.15} className="h-full">
                     <motion.div
-                      className="glass-card relative overflow-hidden rounded-[2rem] p-6 md:p-7"
+                      className="glass-card relative overflow-hidden rounded-[2rem] p-5 sm:p-6 md:p-7"
                       animate={{ y: [0, -8, 0] }}
                       transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <div className="absolute -right-12 -top-12 h-42 w-42 rounded-full bg-[#8cdcff44] blur-2xl" />
                       <div className="text-xs font-semibold tracking-[0.24em] text-[#95aed7] uppercase">{copy.signalBoard.title}</div>
-                      <p className="mt-5 text-3xl font-semibold leading-tight text-[#edf4ff]">{copy.signalBoard.subtitle}</p>
+                      <p className="mt-4 text-2xl leading-[1.14] font-semibold text-[#edf4ff] sm:mt-5 sm:text-3xl sm:leading-[1.1]">
+                        {copy.signalBoard.subtitle}
+                      </p>
                       <div className="divider-line mt-6" />
-                      <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+                      <div className="mt-6 grid grid-cols-2 gap-3 text-xs sm:gap-4 sm:text-sm">
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.rendering}</div>
-                          <div className="mt-1 text-xl font-semibold text-[#ebf2ff]">{copy.signalBoard.metrics.renderingValue}</div>
+                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
+                            {copy.signalBoard.metrics.renderingValue}
+                          </div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.runtime}</div>
-                          <div className="mt-1 text-xl font-semibold text-[#ebf2ff]">{copy.signalBoard.metrics.runtimeValue}</div>
+                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
+                            {copy.signalBoard.metrics.runtimeValue}
+                          </div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.stack}</div>
-                          <div className="mt-1 text-xl font-semibold text-[#ebf2ff]">{copy.signalBoard.metrics.stackValue}</div>
+                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
+                            {copy.signalBoard.metrics.stackValue}
+                          </div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.interaction}</div>
-                          <div className="mt-1 text-xl font-semibold text-[#ebf2ff]">{copy.signalBoard.metrics.interactionValue}</div>
+                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
+                            {copy.signalBoard.metrics.interactionValue}
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -453,12 +536,14 @@ export function PortfolioExperience() {
                 </div>
               </section>
 
-              <section id="projects" className="section-shell space-y-8">
+              <section id="projects" className="section-shell scroll-mt-28 space-y-6 md:scroll-mt-32 md:space-y-8">
                 <Reveal>
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold tracking-[0.24em] text-[#90a8d3] uppercase">{copy.projects.kicker}</p>
-                      <h2 className="mt-3 text-4xl text-[#f2f7ff] md:text-5xl">{copy.projects.title}</h2>
+                      <h2 className="mt-3 pb-[0.04em] text-3xl leading-[1.12] text-[#f2f7ff] sm:text-4xl sm:leading-[1.08] md:text-5xl md:leading-[1.05]">
+                        {copy.projects.title}
+                      </h2>
                     </div>
                     <p className="text-muted max-w-lg text-sm leading-relaxed md:text-base">{copy.projects.description}</p>
                   </div>
@@ -468,9 +553,9 @@ export function PortfolioExperience() {
                   {copy.projects.items.map((project, index) => (
                     <Reveal key={project.title} delay={index * 0.08}>
                       <TiltCard className="h-full rounded-[1.6rem]">
-                        <div className="glass-card flex h-full flex-col rounded-[1.6rem] p-6">
+                        <div className="glass-card flex h-full flex-col rounded-[1.6rem] p-5 sm:p-6">
                           <p className="text-[11px] font-semibold tracking-[0.22em] text-[#87a3d1] uppercase">{project.type}</p>
-                          <h3 className="mt-3 text-2xl text-[#eef4ff]">{project.title}</h3>
+                          <h3 className="mt-3 text-xl text-[#eef4ff] sm:text-2xl">{project.title}</h3>
                           <p className="text-muted mt-4 text-sm leading-relaxed">{project.summary}</p>
 
                           <div className="mt-5 flex flex-wrap gap-2">
@@ -492,17 +577,22 @@ export function PortfolioExperience() {
                 </div>
               </section>
 
-              <section id="about" className="section-shell grid gap-8 md:grid-cols-[0.95fr_1.05fr] md:items-center">
+              <section
+                id="about"
+                className="section-shell scroll-mt-28 grid gap-6 md:scroll-mt-32 md:grid-cols-[0.95fr_1.05fr] md:items-center md:gap-8"
+              >
                 <Reveal>
-                  <div className="glass-card rounded-[2rem] p-7 md:p-8">
+                  <div className="glass-card rounded-[2rem] p-6 md:p-8">
                     <p className="text-xs font-semibold tracking-[0.24em] text-[#8ea7d3] uppercase">{copy.about.kicker}</p>
-                    <h2 className="mt-3 text-4xl text-[#f0f6ff]">{copy.about.title}</h2>
+                    <h2 className="mt-3 pb-[0.04em] text-3xl leading-[1.12] text-[#f0f6ff] sm:text-4xl sm:leading-[1.08]">
+                      {copy.about.title}
+                    </h2>
                     <div className="mt-7 space-y-6">
                       {copy.about.experiences.map((item) => (
                         <div key={item.year + item.title} className="relative pl-5">
                           <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-[#8ef0da] shadow-[0_0_12px_rgba(142,240,218,0.8)]" />
                           <div className="text-[11px] font-semibold tracking-[0.2em] text-[#8aa5d3] uppercase">{item.year}</div>
-                          <div className="mt-1 text-xl font-semibold text-[#eaf2ff]">{item.title}</div>
+                          <div className="mt-1 text-lg font-semibold text-[#eaf2ff] sm:text-xl">{item.title}</div>
                           <p className="text-muted mt-2 text-sm leading-relaxed">{item.detail}</p>
                         </div>
                       ))}
@@ -519,26 +609,30 @@ export function PortfolioExperience() {
                 </Reveal>
               </section>
 
-              <section id="contact" className="section-shell">
+              <section id="contact" className="section-shell scroll-mt-28 md:scroll-mt-32">
                 <Reveal>
-                  <div className="glass-card relative overflow-hidden rounded-[2.2rem] p-8 md:p-10">
+                  <div className="glass-card relative overflow-hidden rounded-[2rem] p-6 sm:p-8 md:rounded-[2.2rem] md:p-10">
                     <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-[#89dfff42] blur-2xl" />
                     <div className="absolute -left-20 -bottom-24 h-56 w-56 rounded-full bg-[#83ffc63a] blur-2xl" />
 
                     <div className="relative z-10 grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-center">
                       <div>
                         <p className="text-xs font-semibold tracking-[0.24em] text-[#8ea9d4] uppercase">{copy.contact.kicker}</p>
-                        <h2 className="mt-3 text-4xl text-[#eff5ff] md:text-5xl">{copy.contact.title}</h2>
+                        <h2 className="mt-3 pb-[0.06em] text-3xl leading-[1.12] text-[#eff5ff] sm:text-4xl sm:leading-[1.08] md:text-5xl md:leading-[1.05]">
+                          {copy.contact.title}
+                        </h2>
                         <p className="text-muted mt-4 max-w-xl text-sm leading-relaxed md:text-base">{copy.contact.description}</p>
                       </div>
 
                       <motion.div
-                        className="mx-auto flex w-full max-w-sm flex-col items-center rounded-[2rem] border border-[#9cc5ff4a] bg-[#0b162b8e] p-6 text-center"
+                        className="mx-auto flex w-full max-w-sm flex-col items-center rounded-[2rem] border border-[#9cc5ff4a] bg-[#0b162b8e] p-5 text-center sm:p-6"
                         animate={{ y: [0, -6, 0] }}
                         transition={{ duration: 4.6, ease: "easeInOut", repeat: Infinity }}
                       >
-                        <div className="h-28 w-28 rounded-full border border-[#9fd9ff66] bg-[radial-gradient(circle,rgba(141,235,255,0.45),rgba(126,174,255,0.08)_65%)] shadow-[0_0_35px_rgba(140,222,255,0.4)]" />
-                        <div className="mt-5 text-sm font-semibold tracking-[0.18em] text-[#dce9ff] uppercase">{copy.contact.openChannel}</div>
+                        <div className="h-24 w-24 rounded-full border border-[#9fd9ff66] bg-[radial-gradient(circle,rgba(141,235,255,0.45),rgba(126,174,255,0.08)_65%)] shadow-[0_0_35px_rgba(140,222,255,0.4)] sm:h-28 sm:w-28" />
+                        <div className="mt-4 text-sm font-semibold tracking-[0.18em] text-[#dce9ff] uppercase sm:mt-5">
+                          {copy.contact.openChannel}
+                        </div>
                         <a className="mt-3 text-sm text-[#92e7d8]" href="mailto:ismael.dev@portfolio.com">
                           ismael.dev@portfolio.com
                         </a>
@@ -556,10 +650,9 @@ export function PortfolioExperience() {
                 </Reveal>
               </section>
             </main>
-
-            <FloatingDock navItems={copy.nav} />
           </motion.div>
         </AnimatePresence>
+        <FloatingDock navItems={copy.nav} />
       </div>
     </SmoothScroll>
   );

@@ -66,7 +66,7 @@ a {
 .section-shell {
   position: relative;
   margin-inline: auto;
-  width: min(1120px, calc(100% - 2rem));
+  width: min(1120px, calc(100% - clamp(1.25rem, 4vw, 2rem)));
 }
 
 .glass-card {
@@ -102,7 +102,7 @@ a {
 .aura {
   pointer-events: none;
   position: absolute;
-  width: 420px;
+  width: clamp(260px, 42vw, 420px);
   aspect-ratio: 1;
   border-radius: 999px;
   background: radial-gradient(circle, rgba(120, 215, 255, 0.3), transparent 68%);
@@ -135,8 +135,8 @@ a {
   position: absolute;
   left: 0;
   top: 0;
-  width: 420px;
-  height: 420px;
+  width: clamp(220px, 46vw, 420px);
+  height: clamp(220px, 46vw, 420px);
   border-radius: 999px;
   background: radial-gradient(circle, rgba(142, 232, 255, 0.4), rgba(101, 165, 255, 0.16) 40%, transparent 74%);
   filter: blur(18px);
@@ -147,10 +147,16 @@ a {
   position: absolute;
   left: 0;
   top: 0;
-  width: 260px;
-  height: 260px;
+  width: clamp(150px, 30vw, 260px);
+  height: clamp(150px, 30vw, 260px);
   border-radius: 999px;
   background: radial-gradient(circle, rgba(127, 248, 219, 0.34), rgba(93, 134, 255, 0.14) 48%, transparent 82%);
   filter: blur(10px);
   mix-blend-mode: screen;
+}
+
+@media (max-width: 640px) {
+  .aura {
+    filter: blur(14px);
+  }
 }

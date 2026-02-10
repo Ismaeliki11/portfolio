@@ -21,6 +21,8 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
       return;
     }
 
+    const isCompactViewport = window.matchMedia("(max-width: 768px)").matches;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -33,8 +35,8 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
         });
       },
       {
-        threshold: 0.45,
-        rootMargin: "-20% 0px -25% 0px",
+        threshold: isCompactViewport ? 0.3 : 0.45,
+        rootMargin: isCompactViewport ? "-12% 0px -52% 0px" : "-20% 0px -25% 0px",
       },
     );
 
@@ -44,8 +46,8 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
   }, [navItems]);
 
   return (
-    <nav className="pointer-events-none fixed bottom-5 left-1/2 z-40 w-full max-w-md -translate-x-1/2 px-4">
-      <div className="pointer-events-auto glass-card mx-auto flex items-center justify-center gap-1 rounded-full p-1.5 md:gap-2">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.6rem)] z-50 flex justify-center px-3 sm:px-4">
+      <div className="pointer-events-auto glass-card mx-auto flex w-full max-w-[32rem] items-center justify-between gap-1 rounded-full p-1.5 sm:justify-center sm:gap-2">
         {navItems.map((item) => {
           const isActive = active === item.id;
 
@@ -53,8 +55,9 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
             <motion.a
               key={item.id}
               href={`#${item.id}`}
+              aria-label={item.label}
               className={clsx(
-                "relative flex min-w-20 items-center justify-center rounded-full px-3.5 py-2 text-xs font-semibold tracking-[0.16em] uppercase transition-colors md:min-w-24",
+                "relative flex min-w-0 flex-1 items-center justify-center rounded-full px-2.5 py-2 text-[10px] font-semibold tracking-[0.12em] uppercase transition-colors sm:flex-none sm:px-3.5 sm:text-xs sm:tracking-[0.16em] md:min-w-24",
                 isActive ? "text-[#041524]" : "text-[#c5d4f1]",
               )}
               whileHover={{ y: -3, scale: 1.04 }}
@@ -67,7 +70,8 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
                   transition={{ type: "spring", stiffness: 260, damping: 24 }}
                 />
               ) : null}
-              <span className="relative z-10">{item.key}</span>
+              <span className="relative z-10 md:hidden">{item.label}</span>
+              <span className="relative z-10 hidden md:inline">{item.key}</span>
               <span className="relative z-10 ml-1.5 hidden tracking-[0.08em] md:inline">{item.label}</span>
             </motion.a>
           );

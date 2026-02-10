@@ -91,7 +91,7 @@ export function CommandPalette({ locale, copy }: CommandPaletteProps) {
     <>
       <button
         type="button"
-        className="glass-card fixed top-4 right-4 z-40 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-[#d2def4] uppercase transition hover:text-white"
+        className="glass-card fixed top-3 right-3 z-40 rounded-full px-2.5 py-1.5 text-[10px] font-semibold tracking-[0.16em] text-[#d2def4] uppercase transition hover:text-white sm:top-4 sm:right-4 sm:px-3 sm:text-[11px] sm:tracking-[0.18em]"
         onClick={() => setIsOpen((value) => !value)}
         aria-label={locale === "es" ? "Abrir paleta de comandos" : "Open command palette"}
       >
@@ -101,7 +101,7 @@ export function CommandPalette({ locale, copy }: CommandPaletteProps) {
       <AnimatePresence>
         {isOpen ? (
           <motion.div
-            className="fixed inset-0 z-50 flex items-start justify-center bg-black/52 px-4 pt-24"
+            className="fixed inset-0 z-50 flex items-start justify-center bg-black/52 px-4 pt-20 sm:pt-24"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
