@@ -1,77 +1,36 @@
-# Portfolio - Liquid Glass Edition
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A premium, high-performance portfolio website built with **Next.js 14**, **Tailwind CSS**, and **Framer Motion**.  
-The design adheres to a strict "Liquid Glass" aesthetic—featuring deep blacks, frosted glassmorphism, iridescent gradients, and fluid physics-based animations.
+## Getting Started
 
-![Project Preview](/src/app/icon.png)
+First, run the development server:
 
-## 🎨 Design Philosophy: "Liquid Glass"
-
-This project treats the UI not as static pages, but as a living, breathing environment.
--   **Glassmorphism**: Every container is a pane of glass. We use tiered blur levels and semi-transparent white borders to simulate physical thickness and light refraction.
--   **Fluidity**: The background is alive with floating liquid orbs. Scrolling is momentum-based (via **Lenis**) to give the page weight.
--   **Depth**: We use noise textures (`bg-noise`) and layered shadows to prevent the "flat" look common in web design.
--   **Interaction**: Elements don't just change color; they lift, scale, and glow. On mobile, they respond to touch with tactile feedback (`scale-95`).
-
-## 🚀 Key Features
-
-### 🌊 Core Experience
--   **Smooth Scrolling**: Integrated **Lenis** for a luxurious, app-like scroll feel that preserves momentum.
--   **Atmospheric Background**: A custom animated mesh gradient system (Liquid Background) that drifts and morphs over time.
--   **Sound Design (Visual)**: Subtle grain/noise overlays to mimic film stock or high-end material textures.
-
-### 📱 Adaptive Layout
--   **Mobile Dock**: The navigation bar transforms from a top "pill" on desktop to a **Floating Bottom Dock** on mobile, mimicking modern iOS ergonomics for thumb-friendly navigation.
--   **Responsive Typography**: Font sizes automatically clamp and scale to prevent widows/orphans on vertical screens.
--   **Touch Optimization**: All interactive elements feature expanded touch targets and visual press states.
-
-### ✨ Animations
--   **Staggered Reveals**: Sections text and cards cascade onto the screen using a custom `staggerContainer` variant.
--   **Spring Physics**: All motions use spring-based physics (not linear duration) for a natural, organic feel.
--   **Scroll-Driven Glass**: The Navbar's blur and opacity dynamically increase as you scroll down the page.
-
-## 🛠 Technology Stack
-
--   **Framework**: [Next.js 14](https://nextjs.org/) (App Router, Server Components)
--   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
--   **Motion**: [Framer Motion](https://www.framer.com/motion/) (Complex choreography & transitions)
--   **Scroll**: [@studio-freight/react-lenis](https://github.com/darkroomengineering/lenis) (Smooth scrolling)
--   **Icons**: [Lucide React](https://lucide.dev/)
--   **Utilities**: `clsx` & `tailwind-merge` for robust class handling.
-
-## 📂 Project Structure
-
-```
-src/
-├── app/
-│   ├── globals.css       # Core design tokens, noise textures, and liquid animations
-│   ├── layout.tsx        # Application shell & SmoothScroll provider
-│   └── page.tsx          # Main entry (Hero > Projects > About > Contact)
-├── components/
-│   ├── ui/               # Reusable atoms (GlassCard, SmoothScroll)
-│   ├── hero.tsx          # "Ismael" brand reveal section
-│   ├── navbar.tsx        # Responsive Dock/Pill navigation
-│   └── ...
-└── lib/
-    └── animations.ts     # Centralized Framer Motion variants (single source of truth for motion)
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## ⚡ Getting Started
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-2.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-3.  **Build for Production**:
-    ```bash
-    npm run build
-    ```
+## Learn More
 
----
-*Created by Antigravity Agent for Ismael.*
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
