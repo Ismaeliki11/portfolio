@@ -177,23 +177,62 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
     const { width, height } = sizeRef.current;
     if (width === 0 || height === 0) return;
 
-    // Define shapes based on skill categories
-    const shapes: Record<string, { x: number, y: number }[]> = {
-      core: [ // Hexagon
-        { x: 0, y: -120 }, { x: 104, y: -60 }, { x: 104, y: 60 },
-        { x: 0, y: 120 }, { x: -104, y: 60 }, { x: -104, y: -60 }
+    // Define unique constellation shapes per technology
+    const shapes: Record<string, { x: number; y: number }[]> = {
+      // Next.js — Angular "N" letterform / forward arrow
+      "Next.js": [
+        { x: -90, y: 120 }, { x: -90, y: -120 }, { x: 90, y: 120 },
+        { x: 90, y: -120 }
       ],
-      web: [ // Triangle
-        { x: 0, y: -130 }, { x: 110, y: 80 }, { x: -110, y: 80 }
+      // React 19 — Atomic orbital: two crossing ellipses
+      "React 19": [
+        { x: 0, y: -130 }, { x: 120, y: -45 }, { x: 120, y: 45 },
+        { x: 0, y: 130 }, { x: -120, y: 45 }, { x: -120, y: -45 },
+        { x: 0, y: 0 } // nucleus
       ],
-      tools: [ // Diamond
-        { x: 0, y: -140 }, { x: 90, y: 0 }, { x: 0, y: 140 }, { x: -90, y: 0 }
+      // Tailwind v4 — Flowing sine wave (wind current)
+      "Tailwind v4": [
+        { x: -140, y: 30 }, { x: -90, y: -50 }, { x: -30, y: 50 },
+        { x: 30, y: -50 }, { x: 90, y: 50 }, { x: 140, y: -30 }
+      ],
+      // Framer Motion — Swooping motion arc with speed trail
+      "Framer Motion": [
+        { x: -130, y: 80 }, { x: -70, y: -20 }, { x: -10, y: -90 },
+        { x: 60, y: -110 }, { x: 120, y: -70 }, { x: 130, y: 10 }
+      ],
+      // TypeScript — Angled brackets <> evoking generics/types
+      "TypeScript": [
+        { x: -50, y: -120 }, { x: -130, y: 0 }, { x: -50, y: 120 },
+        { x: 50, y: -120 }, { x: 130, y: 0 }, { x: 50, y: 120 }
+      ],
+      // Node.js — Hexagonal prism (Node hex logo, tall)
+      "Node.js": [
+        { x: 0, y: -140 }, { x: 100, y: -80 }, { x: 100, y: 60 },
+        { x: 0, y: 130 }, { x: -100, y: 60 }, { x: -100, y: -80 }
+      ],
+      // Sharp — Precise diamond blade / kite shape
+      "Sharp": [
+        { x: 0, y: -140 }, { x: 60, y: -20 }, { x: 0, y: 140 },
+        { x: -60, y: -20 }
+      ],
+      // UI/UX — Golden spiral approximation
+      "UI/UX": [
+        { x: 0, y: -10 }, { x: 50, y: -60 }, { x: 120, y: -30 },
+        { x: 130, y: 60 }, { x: 60, y: 110 }, { x: -40, y: 90 },
+        { x: -110, y: 20 }, { x: -100, y: -70 }
+      ],
+      // Vercel — Iconic triangle / delta
+      "Vercel": [
+        { x: 0, y: -130 }, { x: 120, y: 100 }, { x: -120, y: 100 }
+      ],
+      // SVGO — Bezier curve control points
+      "SVGO": [
+        { x: -130, y: 80 }, { x: -80, y: -100 }, { x: 0, y: 40 },
+        { x: 80, y: -100 }, { x: 130, y: 80 }
       ]
     };
 
-    let shape = shapes.core;
-    if (["Tailwind v4", "Sharp", "Vercel", "SVGO"].includes(hoveredSkill)) shape = shapes.tools;
-    if (["React 19", "UI/UX"].includes(hoveredSkill)) shape = shapes.web;
+    const shape = shapes[hoveredSkill] ?? shapes["Node.js"];
 
     const shapeScale = width < 768 ? 0.65 : 1.1; // Scale shapes based on screen
 

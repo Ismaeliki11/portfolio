@@ -724,11 +724,36 @@ export function PortfolioExperience() {
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ duration: 0.3 }}
-                          className="absolute inset-0 flex items-center justify-center p-8"
+                          className="absolute inset-0 flex flex-col items-center justify-center p-8"
                         >
                           <div className="text-center">
                             <div className="text-[10px] font-semibold tracking-[0.24em] text-[#8ea7d3] uppercase">Analyzing Node</div>
                             <div className="mt-2 text-3xl font-bold text-[#d4e5ff] tracking-tight">{hoveredSkill}</div>
+                          </div>
+
+                          <div className="absolute bottom-8 left-0 right-0 px-8">
+                            <div className="mx-auto max-w-[260px]">
+                              <div className="h-px w-full bg-gradient-to-r from-transparent via-[#4a6a9a44] to-transparent" />
+                              <motion.p
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.15 }}
+                                className="mt-3 text-center text-[10px] leading-relaxed tracking-[0.08em] text-[#6a84aa]"
+                              >
+                                {{
+                                  "Next.js": "Letra N \u2014 Identidad tipogr\u00e1fica del framework",
+                                  "React 19": "Orbital at\u00f3mico \u2014 Electrones en \u00f3rbita, como sus componentes",
+                                  "Tailwind v4": "Onda de viento \u2014 Flujo utility-first como corriente de aire",
+                                  "Framer Motion": "Arco cin\u00e9tico \u2014 Trayectoria de animaci\u00f3n en movimiento",
+                                  "TypeScript": "Brackets <> \u2014 Los gen\u00e9ricos que definen el tipado",
+                                  "Node.js": "Prisma hexagonal \u2014 El ic\u00f3nico hex\u00e1gono del runtime",
+                                  "Sharp": "Hoja de diamante \u2014 Precisi\u00f3n en procesamiento de imagen",
+                                  "UI/UX": "Espiral \u00e1urea \u2014 La proporci\u00f3n que gu\u00eda todo buen dise\u00f1o",
+                                  "Vercel": "Tri\u00e1ngulo delta \u2014 El s\u00edmbolo de deploy instant\u00e1neo",
+                                  "SVGO": "Curva B\u00e9zier \u2014 Puntos de control que definen un SVG"
+                                }[hoveredSkill] ?? ""}
+                              </motion.p>
+                            </div>
                           </div>
                         </motion.div>
                       )}
