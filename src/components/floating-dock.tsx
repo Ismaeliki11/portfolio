@@ -7,49 +7,17 @@ import type { NavItem } from "@/lib/site-copy";
 
 type FloatingDockProps = {
   navItems: NavItem[];
+  activeId: string;
 };
 
-export function FloatingDock({ navItems }: FloatingDockProps) {
-  const [active, setActive] = useState<NavItem["id"]>(navItems[0]?.id ?? "hero");
+export function FloatingDock({ navItems, activeId }: FloatingDockProps) {
 
-  useEffect(() => {
-    const sections = navItems
-      .map((item) => document.getElementById(item.id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
-    if (!sections.length) {
-      return;
-    }
-
-    const isCompactViewport = window.matchMedia("(max-width: 768px)").matches;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const next = navItems.find((item) => item.id === entry.target.id);
-            if (next) {
-              setActive(next.id);
-            }
-          }
-        });
-      },
-      {
-        threshold: isCompactViewport ? 0.3 : 0.45,
-        rootMargin: isCompactViewport ? "-12% 0px -52% 0px" : "-20% 0px -25% 0px",
-      },
-    );
-
-    sections.forEach((section) => observer.observe(section));
-
-    return () => observer.disconnect();
-  }, [navItems]);
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.6rem)] z-50 flex justify-center px-3 sm:px-4">
       <div className="pointer-events-auto glass-card mx-auto flex w-full max-w-[32rem] items-center justify-between gap-1 rounded-full p-1.5 sm:justify-center sm:gap-2">
         {navItems.map((item) => {
-          const isActive = active === item.id;
+          const isActive = activeId === item.id;
 
           return (
             <motion.a
@@ -63,16 +31,25 @@ export function FloatingDock({ navItems }: FloatingDockProps) {
               whileHover={{ y: -3, scale: 1.04 }}
               whileTap={{ scale: 0.98 }}
             >
-              {isActive ? (
+              {isActive && (
                 <motion.span
                   layoutId="dock-active"
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7de2ff] via-[#88f8d4] to-[#95b3ff]"
-                  transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                />
-              ) : null}
-              <span className="relative z-10 md:hidden">{item.label}</span>
-              <span className="relative z-10 hidden md:inline">{item.key}</span>
-              <span className="relative z-10 ml-1.5 hidden tracking-[0.08em] md:inline">{item.label}</span>
+                  className="absolute inset-0 rounded-full bg-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-md"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                >
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7de2ff]/90 via-[#88f8d4]/90 to-[#95b3ff]/90" />
+                  <div className="absolute inset-0 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]" />
+                </motion.span>
+              )}
+              <motion.span
+                animate={{ color: isActive ? "#041524" : "#c5d4f1" }}
+                className="relative z-10 flex items-center"
+              >
+                <span className="md:hidden">{item.label}</span>
+                <span className="hidden md:inline">{item.key}</span>
+                <span className="ml-2 hidden tracking-[0.08em] md:inline">{item.label}</span>
+              </motion.span>
             </motion.a>
           );
         })}

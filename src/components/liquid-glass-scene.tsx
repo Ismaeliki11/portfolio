@@ -92,6 +92,10 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     elapsed: 0,
   });
 
+  // Performance monitoring
+  const frameTimesRef = useRef<number[]>([]);
+  const isLowPerfRef = useRef(false);
+
   const initialX = typeof window === "undefined" ? -260 : window.innerWidth * 0.5;
   const initialY = typeof window === "undefined" ? -260 : window.innerHeight * 0.5;
 
@@ -123,7 +127,6 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     }
 
     if (previousSectionRef.current !== activeSection) {
-      warpEnergyRef.current = Math.max(warpEnergyRef.current, 1);
       previousSectionRef.current = activeSection;
     }
   }, [activeSection]);
@@ -162,7 +165,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       return;
     }
 
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false }); // Optimization: opaque background
     if (!context) {
       return;
     }
@@ -183,7 +186,8 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Cap DPR for performance on hi-res integrated graphics
+      dpr = Math.min(window.devicePixelRatio || 1, isLowPerfRef.current ? 1 : 1.5);
       sizeRef.current = { width, height };
 
       canvas.width = Math.floor(width * dpr);
@@ -192,11 +196,29 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       canvas.style.height = `${height}px`;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      starsRef.current = createStars(width, height, coarsePointerRef.current);
+      starsRef.current = createStars(width, height, coarsePointerRef.current || isLowPerfRef.current);
       pointerRef.current.x = width * 0.5;
       pointerRef.current.y = height * 0.5;
       pointerX.set(width * 0.5);
       pointerY.set(height * 0.5);
+    };
+
+    const updatePerformance = (elapsedMs: number) => {
+      if (isLowPerfRef.current) return;
+
+      const frameTimes = frameTimesRef.current;
+      frameTimes.push(elapsedMs);
+
+      if (frameTimes.length > 60) {
+        const avgFrameTime = frameTimes.reduce((a, b) => a + b) / frameTimes.length;
+        // If average frame time is > 30ms (~33fps), switch to low-perf
+        if (avgFrameTime > 30) {
+          isLowPerfRef.current = true;
+          document.documentElement.setAttribute("data-low-perf", "true");
+          resize(); // Re-calculate stars and DPR
+        }
+        frameTimes.length = 0; // Reset for periodic check
+      }
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -251,10 +273,12 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     };
 
     const drawFrame = (time: number) => {
-      const elapsedMs = Math.min(time - previousTime, 50);
+      const elapsedMs = time - previousTime;
       const delta = Math.min(elapsedMs / 16.666, 2.2);
       const deltaSeconds = elapsedMs / 1000;
       previousTime = time;
+
+      updatePerformance(elapsedMs);
 
       const stars = starsRef.current;
       const pointer = pointerRef.current;
@@ -262,6 +286,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       const centerY = height * 0.5;
       const burst = burstRef.current;
       const coarsePointer = coarsePointerRef.current;
+      const isLowPerf = isLowPerfRef.current;
 
       if (!pointer.active && coarsePointer) {
         const autoX = centerX + Math.cos(time * 0.00023) * width * 0.2;
@@ -302,8 +327,8 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         }
       }
 
-      context.clearRect(0, 0, width, height);
-      context.fillStyle = "rgba(6, 12, 24, 0.2)";
+      // Optimization: opaque fill instead of clearRect if not transparent
+      context.fillStyle = "#060c18";
       context.fillRect(0, 0, width, height);
 
       if (warpEnergy > 0.02) {
@@ -373,7 +398,8 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         const twinkle = 0.72 + Math.sin(time * 0.001 * star.twinkle + star.phase) * 0.28;
         const alpha = star.alpha * twinkle;
 
-        if (warpEnergy > 0.05) {
+        // Skip complex star drawing on low performance
+        if (!isLowPerf && warpEnergy > 0.05) {
           const streakLength = (6 + warpEnergy * 28) * (0.55 + star.depth * 0.5);
           context.beginPath();
           context.strokeStyle = `rgba(202, 232, 255, ${alpha * 0.42 * warpEnergy})`;
@@ -388,7 +414,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         context.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         context.fill();
 
-        if (pointer.intensity > 0.01) {
+        if (!isLowPerf && pointer.intensity > 0.01) {
           const distanceToPointer = Math.hypot(star.x - pointer.x, star.y - pointer.y);
           if (distanceToPointer < repulseRadius * 0.7) {
             const glow = (1 - distanceToPointer / (repulseRadius * 0.7)) * 0.7 * pointer.intensity * pointerForceScale;
@@ -473,3 +499,5 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     </div>
   );
 }
+
+

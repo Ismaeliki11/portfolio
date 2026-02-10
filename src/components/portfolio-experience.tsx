@@ -9,6 +9,8 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { Reveal } from "@/components/ui/reveal";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { isSiteLocale, siteCopy, type SiteLocale } from "@/lib/site-copy";
+import { ContactForm } from "@/components/contact-form";
+import { useGitHubStats } from "@/lib/hooks/use-github-stats";
 
 const supportedLocales: SiteLocale[] = ["es", "en"];
 const sectionIds = ["hero", "projects", "about", "contact"] as const;
@@ -62,9 +64,8 @@ function LocaleSwitch({ locale, label, onChange }: LocaleSwitchProps) {
             <button
               type="button"
               key={item}
-              className={`relative z-10 h-7 w-12 rounded-full text-[10px] font-semibold tracking-[0.16em] uppercase transition ${
-                isActive ? "text-[#041524]" : "text-[#c6d5ee] hover:text-white"
-              }`}
+              className={`relative z-10 h-7 w-12 rounded-full text-[10px] font-semibold tracking-[0.16em] uppercase transition ${isActive ? "text-[#041524]" : "text-[#c6d5ee] hover:text-white"
+                }`}
               onClick={(event) => {
                 const bounds = event.currentTarget.getBoundingClientRect();
                 onChange(item, {
@@ -362,6 +363,7 @@ function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
 }
 
 export function PortfolioExperience() {
+  const stats = useGitHubStats("ismaeliki11");
   const [locale, setLocale] = useState<SiteLocale>(() => {
     if (typeof window === "undefined") {
       return "es";
@@ -384,37 +386,53 @@ export function PortfolioExperience() {
   }, [locale]);
 
   useEffect(() => {
-    const sections = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
-    if (!sections.length) {
-      return;
-    }
-
-    const isCompactViewport = window.matchMedia("(max-width: 768px)").matches;
+    const visibilityMap = new Map<string, number>();
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const next = sectionIds.find((id) => id === entry.target.id);
-            if (next) {
-              setActiveSection(next);
-            }
+          visibilityMap.set(entry.target.id, entry.intersectionRatio);
+        });
+
+        let maxRatio = -1;
+        let mostVisibleId: SectionId = activeSection;
+
+        visibilityMap.forEach((ratio, id) => {
+          if (ratio > maxRatio) {
+            maxRatio = ratio;
+            mostVisibleId = id as SectionId;
           }
         });
+
+        if (maxRatio > 0) {
+          setActiveSection(mostVisibleId);
+        }
       },
       {
-        threshold: isCompactViewport ? 0.36 : 0.52,
-        rootMargin: isCompactViewport ? "-16% 0px -40% 0px" : "-24% 0px -24% 0px",
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
       },
     );
 
-    sections.forEach((section) => observer.observe(section));
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
 
-    return () => observer.disconnect();
-  }, [locale]);
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      if (scrollY < 50) {
+        setActiveSection("hero");
+      } else if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 50) {
+        setActiveSection("contact");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []); // Only once, as IDs don't change
 
   const handleLocaleChange = (nextLocale: SiteLocale, origin: LocaleSwitchOrigin) => {
     if (nextLocale === locale) {
@@ -508,27 +526,47 @@ export function PortfolioExperience() {
                       <div className="mt-6 grid grid-cols-2 gap-3 text-xs sm:gap-4 sm:text-sm">
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.rendering}</div>
-                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
-                            {copy.signalBoard.metrics.renderingValue}
-                          </div>
+                          <motion.div
+                            key={stats.repos}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl"
+                          >
+                            {stats.loading ? "..." : stats.repos}
+                          </motion.div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.runtime}</div>
-                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
-                            {copy.signalBoard.metrics.runtimeValue}
-                          </div>
+                          <motion.div
+                            key={stats.followers}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl"
+                          >
+                            {stats.loading ? "..." : stats.followers}
+                          </motion.div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.stack}</div>
-                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
-                            {copy.signalBoard.metrics.stackValue}
-                          </div>
+                          <motion.div
+                            key={stats.contributions}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl"
+                          >
+                            {stats.loading ? "..." : `+${stats.contributions}`}
+                          </motion.div>
                         </div>
                         <div>
                           <div className="text-muted">{copy.signalBoard.metrics.interaction}</div>
-                          <div className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl">
-                            {copy.signalBoard.metrics.interactionValue}
-                          </div>
+                          <motion.div
+                            key={stats.lastCommit}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="mt-1 text-lg font-semibold text-[#ebf2ff] sm:text-xl"
+                          >
+                            {stats.loading ? "..." : stats.lastCommit}
+                          </motion.div>
                         </div>
                       </div>
                     </motion.div>
@@ -615,36 +653,61 @@ export function PortfolioExperience() {
                     <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-[#89dfff42] blur-2xl" />
                     <div className="absolute -left-20 -bottom-24 h-56 w-56 rounded-full bg-[#83ffc63a] blur-2xl" />
 
-                    <div className="relative z-10 grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+
+
+                    <div className="relative z-10 grid gap-10 md:grid-cols-[1fr_1fr] md:items-start md:gap-14">
                       <div>
                         <p className="text-xs font-semibold tracking-[0.24em] text-[#8ea9d4] uppercase">{copy.contact.kicker}</p>
                         <h2 className="mt-3 pb-[0.06em] text-3xl leading-[1.12] text-[#eff5ff] sm:text-4xl sm:leading-[1.08] md:text-5xl md:leading-[1.05]">
                           {copy.contact.title}
                         </h2>
-                        <p className="text-muted mt-4 max-w-xl text-sm leading-relaxed md:text-base">{copy.contact.description}</p>
+                        <p className="text-muted mt-5 max-w-xl text-sm leading-relaxed md:text-base">{copy.contact.description}</p>
+
+                        <div className="mt-8 flex flex-col items-start gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-1.5 w-1.5 rounded-full bg-[#83ffd6] shadow-[0_0_10px_#83ffd6]" />
+                            <span className="text-[11px] font-semibold tracking-[0.16em] text-[#9cb2d8] uppercase">{copy.contact.openChannel}</span>
+                          </div>
+                          <a className="text-xl font-medium text-[#f5f9ff] transition-colors hover:text-[#7ce1ff]" href="mailto:ismael.dev@portfolio.com">
+                            ismael.dev@portfolio.com
+                          </a>
+                          <div className="flex gap-6 pt-2">
+                            {[
+                              {
+                                name: "Github",
+                                href: "https://github.com/ismaeliki11",
+                                icon: (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></svg>
+                                )
+                              },
+                              {
+                                name: "LinkedIn",
+                                href: "https://linkedin.com",
+                                icon: (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></svg>
+                                )
+                              }
+                            ].map((social) => (
+                              <a
+                                key={social.name}
+                                className="group flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-[#8ea9d4] uppercase transition-all hover:text-[#f5f9ff]"
+                                href={social.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <span className="transition-transform group-hover:scale-110 group-hover:text-[#7ce1ff]">
+                                  {social.icon}
+                                </span>
+                                {social.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
-                      <motion.div
-                        className="mx-auto flex w-full max-w-sm flex-col items-center rounded-[2rem] border border-[#9cc5ff4a] bg-[#0b162b8e] p-5 text-center sm:p-6"
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ duration: 4.6, ease: "easeInOut", repeat: Infinity }}
-                      >
-                        <div className="h-24 w-24 rounded-full border border-[#9fd9ff66] bg-[radial-gradient(circle,rgba(141,235,255,0.45),rgba(126,174,255,0.08)_65%)] shadow-[0_0_35px_rgba(140,222,255,0.4)] sm:h-28 sm:w-28" />
-                        <div className="mt-4 text-sm font-semibold tracking-[0.18em] text-[#dce9ff] uppercase sm:mt-5">
-                          {copy.contact.openChannel}
-                        </div>
-                        <a className="mt-3 text-sm text-[#92e7d8]" href="mailto:ismael.dev@portfolio.com">
-                          ismael.dev@portfolio.com
-                        </a>
-                        <div className="mt-6 flex gap-3 text-xs">
-                          <a className="glass-card rounded-full px-3 py-2 tracking-[0.16em] text-[#d7e4ff] uppercase" href="#">
-                            Github
-                          </a>
-                          <a className="glass-card rounded-full px-3 py-2 tracking-[0.16em] text-[#d7e4ff] uppercase" href="#">
-                            LinkedIn
-                          </a>
-                        </div>
-                      </motion.div>
+                      <div className="rounded-[2rem] border border-[#9cc5ff24] bg-[#0b162b4d] p-6 md:p-8">
+                        <ContactForm copy={copy.contact.form} />
+                      </div>
                     </div>
                   </div>
                 </Reveal>
@@ -652,7 +715,7 @@ export function PortfolioExperience() {
             </main>
           </motion.div>
         </AnimatePresence>
-        <FloatingDock navItems={copy.nav} />
+        <FloatingDock navItems={copy.nav} activeId={activeSection} />
       </div>
     </SmoothScroll>
   );

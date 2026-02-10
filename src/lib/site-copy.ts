@@ -74,6 +74,15 @@ type SiteCopy = {
     title: string;
     description: string;
     openChannel: string;
+    form: {
+      name: string;
+      email: string;
+      message: string;
+      submit: string;
+      sending: string;
+      success: string;
+      error: string;
+    };
   };
   commandPalette: {
     trigger: string;
@@ -121,14 +130,14 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
       title: "Signal Board",
       subtitle: "Interfaces que se sienten fisicas.",
       metrics: {
-        rendering: "Rendering",
-        runtime: "Runtime",
-        stack: "Stack",
-        interaction: "Interaccion",
-        renderingValue: "120 FPS cap",
-        runtimeValue: "Edge-first",
-        stackValue: "Next.js 16",
-        interactionValue: "Shader driven",
+        rendering: "Repositorios",
+        runtime: "Seguidores",
+        stack: "Contribuciones",
+        interaction: "Último Commit",
+        renderingValue: "---",
+        runtimeValue: "---",
+        stackValue: "---",
+        interactionValue: "---",
       },
     },
     projects: {
@@ -194,6 +203,15 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
       description:
         "Si quieres una web con presencia real, animacion con criterio y arquitectura profesional, arrancamos esta semana.",
       openChannel: "Canal abierto",
+      form: {
+        name: "Nombre",
+        email: "Email",
+        message: "Mensaje",
+        submit: "Enviar mensaje",
+        sending: "Enviando...",
+        success: "¡Mensaje enviado!",
+        error: "Hubo un error. Inténtalo de nuevo.",
+      },
     },
     commandPalette: {
       trigger: "CMD/CTRL + K",
@@ -233,14 +251,14 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
       title: "Signal Board",
       subtitle: "Interfaces that feel physical.",
       metrics: {
-        rendering: "Rendering",
-        runtime: "Runtime",
-        stack: "Stack",
-        interaction: "Interaction",
-        renderingValue: "120 FPS cap",
-        runtimeValue: "Edge-first",
-        stackValue: "Next.js 16",
-        interactionValue: "Shader driven",
+        rendering: "Repositories",
+        runtime: "Followers",
+        stack: "Contributions",
+        interaction: "Last Commit",
+        renderingValue: "---",
+        runtimeValue: "---",
+        stackValue: "---",
+        interactionValue: "---",
       },
     },
     projects: {
@@ -306,6 +324,15 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
       description:
         "If you want a site with real presence, thoughtful animation, and professional architecture, we can start this week.",
       openChannel: "Open channel",
+      form: {
+        name: "Name",
+        email: "Email",
+        message: "Message",
+        submit: "Send message",
+        sending: "Sending...",
+        success: "Message sent!",
+        error: "Something went wrong. Try again.",
+      },
     },
     commandPalette: {
       trigger: "CMD/CTRL + K",
