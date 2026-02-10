@@ -27,7 +27,7 @@
 html,
 body {
   min-height: 100%;
-  scroll-behavior: smooth;
+  /* scroll-behavior: smooth; <-- Disabled to avoid conflict with Lenis */
 }
 
 body {
@@ -85,6 +85,7 @@ a {
 [data-low-perf="true"] .glass-card {
   backdrop-filter: blur(6px);
   background: rgba(10, 15, 28, 0.88);
+  --dock-filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

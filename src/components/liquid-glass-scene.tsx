@@ -40,6 +40,8 @@ type BurstState = {
 type LiquidGlassSceneProps = {
   activeSection?: string;
   localeBurst?: LocaleBurst | null;
+  hoveredSkill?: string | null;
+  targetElementRef?: React.RefObject<HTMLElement | null>;
 };
 
 function createStars(width: number, height: number, isCoarsePointer: boolean) {
@@ -72,7 +74,7 @@ function createStars(width: number, height: number, isCoarsePointer: boolean) {
   return stars;
 }
 
-export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassSceneProps) {
+export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, targetElementRef }: LiquidGlassSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<Star[]>([]);
   const pointerRef = useRef<PointerState>({
@@ -91,6 +93,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     y: 0,
     elapsed: 0,
   });
+  const targetCenterRef = useRef<{ x: number; y: number } | null>(null);
 
   // Performance monitoring
   const frameTimesRef = useRef<number[]>([]);
@@ -159,13 +162,59 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     pointerPresence.set(1);
   }, [localeBurst, pointerPresence, pointerX, pointerY]);
 
+  // Constellation Logic
+  const constellationRef = useRef<{ skill: string | null; points: { x: number; y: number }[] }>({
+    skill: null,
+    points: []
+  });
+
+  useEffect(() => {
+    if (!hoveredSkill) {
+      constellationRef.current = { skill: null, points: [] };
+      return;
+    }
+
+    const { width, height } = sizeRef.current;
+    if (width === 0 || height === 0) return;
+
+    // Define shapes based on skill categories
+    const shapes: Record<string, { x: number, y: number }[]> = {
+      core: [ // Hexagon
+        { x: 0, y: -120 }, { x: 104, y: -60 }, { x: 104, y: 60 },
+        { x: 0, y: 120 }, { x: -104, y: 60 }, { x: -104, y: -60 }
+      ],
+      web: [ // Triangle
+        { x: 0, y: -130 }, { x: 110, y: 80 }, { x: -110, y: 80 }
+      ],
+      tools: [ // Diamond
+        { x: 0, y: -140 }, { x: 90, y: 0 }, { x: 0, y: 140 }, { x: -90, y: 0 }
+      ]
+    };
+
+    let shape = shapes.core;
+    if (["Tailwind v4", "Sharp", "Vercel", "SVGO"].includes(hoveredSkill)) shape = shapes.tools;
+    if (["React 19", "UI/UX"].includes(hoveredSkill)) shape = shapes.web;
+
+    const shapeScale = width < 768 ? 0.65 : 1.1; // Scale shapes based on screen
+
+    // Store OFFSETS instead of absolute positions
+    // We will apply the center position dynamically in the draw loop
+    constellationRef.current = {
+      skill: hoveredSkill,
+      points: shape.map(p => ({
+        x: p.x * shapeScale,
+        y: p.y * shapeScale
+      }))
+    };
+  }, [hoveredSkill]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
 
-    const context = canvas.getContext("2d", { alpha: false }); // Optimization: opaque background
+    const context = canvas.getContext("2d", { alpha: true });
     if (!context) {
       return;
     }
@@ -201,6 +250,21 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       pointerRef.current.y = height * 0.5;
       pointerX.set(width * 0.5);
       pointerY.set(height * 0.5);
+      updateTargetCenter();
+    };
+
+    const updateTargetCenter = () => {
+      if (targetElementRef?.current) {
+        const rect = targetElementRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          targetCenterRef.current = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+          };
+        }
+      } else {
+        targetCenterRef.current = null;
+      }
     };
 
     const updatePerformance = (elapsedMs: number) => {
@@ -327,9 +391,12 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         }
       }
 
-      // Optimization: opaque fill instead of clearRect if not transparent
-      context.fillStyle = "#060c18";
-      context.fillRect(0, 0, width, height);
+      context.clearRect(0, 0, width, height);
+      const constellation = constellationRef.current;
+      if (constellation.skill) {
+        context.fillStyle = "rgba(0, 0, 0, 0.45)";
+        context.fillRect(0, 0, width, height);
+      }
 
       if (warpEnergy > 0.02) {
         context.fillStyle = `rgba(112, 192, 255, ${warpEnergy * 0.08})`;
@@ -347,8 +414,33 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         const radialDirX = radialX / radialDistance;
         const radialDirY = radialY / radialDistance;
 
-        star.vx += (star.baseX - star.x) * (0.0038 + star.depth * 0.0018) * delta;
-        star.vy += (star.baseY - star.y) * (0.0038 + star.depth * 0.0018) * delta;
+        // Attract to constellation point if assigned
+        let targetX = star.baseX;
+        let targetY = star.baseY;
+        let forceScale = 0.0038 + star.depth * 0.0018;
+
+        if (constellation.skill && index < constellation.points.length * 6) {
+          // Calculate dynamic center
+          let cx = width * (width < 768 ? 0.5 : 0.28);
+          let cy = height * 0.72;
+
+          // Use CACHED center position to avoid reflow every frame
+          if (targetCenterRef.current) {
+            cx = targetCenterRef.current.x;
+            cy = targetCenterRef.current.y;
+          }
+
+          const ptIdx = Math.floor(index / 6);
+          const pt = constellation.points[ptIdx];
+          if (pt) {
+            targetX = cx + pt.x + (Math.random() - 0.5) * 6;
+            targetY = cy + pt.y + (Math.random() - 0.5) * 6;
+            forceScale = 0.045 + star.depth * 0.02;
+          }
+        }
+
+        star.vx += (targetX - star.x) * forceScale * delta;
+        star.vy += (targetY - star.y) * forceScale * delta;
 
         const driftX = Math.cos(time * 0.00015 * star.depth + star.phase) * 0.025;
         const driftY = Math.sin(time * 0.0002 * star.depth + star.phase * 1.2) * 0.025;
@@ -383,9 +475,13 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
           const distance = Math.hypot(dx, dy) || 1;
 
           if (distance < repulseRadius) {
+            // Stars in constellation ignore repulsion so they don't flee the hover
+            const isInConstellation = constellation.skill && index < constellation.points.length * 6;
+            const repulsionST = isInConstellation ? 0.1 : 1.0;
+
             const influence = (1 - distance / repulseRadius) * (0.68 + star.depth * 0.5) * pointer.intensity;
-            star.vx += (dx / distance) * influence * 2.1 * delta * pointerForceScale;
-            star.vy += (dy / distance) * influence * 2.1 * delta * pointerForceScale;
+            star.vx += (dx / distance) * influence * 2.1 * delta * pointerForceScale * repulsionST;
+            star.vy += (dy / distance) * influence * 2.1 * delta * pointerForceScale * repulsionST;
           }
         }
 
@@ -395,33 +491,57 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
         star.x += star.vx * delta;
         star.y += star.vy * delta;
 
+        const isInConstellation = constellation.skill && index < constellation.points.length * 6;
         const twinkle = 0.72 + Math.sin(time * 0.001 * star.twinkle + star.phase) * 0.28;
-        const alpha = star.alpha * twinkle;
+        const alpha = star.alpha * twinkle * (isInConstellation ? 1.5 : 1);
+        const size = star.size * (isInConstellation ? 2.2 : 1);
 
         // Skip complex star drawing on low performance
         if (!isLowPerf && warpEnergy > 0.05) {
           const streakLength = (6 + warpEnergy * 28) * (0.55 + star.depth * 0.5);
           context.beginPath();
           context.strokeStyle = `rgba(202, 232, 255, ${alpha * 0.42 * warpEnergy})`;
-          context.lineWidth = star.size * 0.72;
+          context.lineWidth = isInConstellation ? size * 0.4 : star.size * 0.72;
           context.moveTo(star.x - radialDirX * streakLength, star.y - radialDirY * streakLength);
           context.lineTo(star.x + radialDirX * streakLength * 0.24, star.y + radialDirY * streakLength * 0.24);
           context.stroke();
         }
 
         context.beginPath();
-        context.fillStyle = `rgba(214, 237, 255, ${alpha})`;
-        context.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        context.fillStyle = isInConstellation ? `rgba(160, 240, 255, ${alpha * 1.2})` : `rgba(214, 237, 255, ${alpha})`;
+        context.arc(star.x, star.y, size, 0, Math.PI * 2);
         context.fill();
 
-        if (!isLowPerf && pointer.intensity > 0.01) {
+        if (!isLowPerf && (pointer.intensity > 0.01 || isInConstellation)) {
           const distanceToPointer = Math.hypot(star.x - pointer.x, star.y - pointer.y);
-          if (distanceToPointer < repulseRadius * 0.7) {
-            const glow = (1 - distanceToPointer / (repulseRadius * 0.7)) * 0.7 * pointer.intensity * pointerForceScale;
+          const glowRadius = isInConstellation ? size * 5.2 : repulseRadius * 0.7;
+
+          if (isInConstellation || distanceToPointer < glowRadius) {
+            const glow = isInConstellation ? 0.6 : (1 - distanceToPointer / glowRadius) * 0.7 * pointer.intensity * pointerForceScale;
             context.beginPath();
-            context.fillStyle = `rgba(138, 228, 255, ${glow * 0.3})`;
-            context.arc(star.x, star.y, star.size * 4.8, 0, Math.PI * 2);
+            // Reduce glow opacity for constellation to prevent blob effect
+            context.fillStyle = `rgba(138, 228, 255, ${glow * (isInConstellation ? 0.15 : 0.35)})`;
+            context.arc(star.x, star.y, size * (isInConstellation ? 4.0 : 4.8), 0, Math.PI * 2);
             context.fill();
+          }
+        }
+
+        // Connect constellation stars with lines
+        if (constellation.skill && index < constellation.points.length * 6 && index % 6 === 0) {
+          const ptIdx = index / 6;
+          const nextIdx = (ptIdx + 1) % constellation.points.length;
+          const nextStar = stars[(nextIdx * 6)];
+
+          if (nextStar) {
+            const dist = Math.hypot(star.x - nextStar.x, star.y - nextStar.y);
+            if (dist < 320) {
+              context.beginPath();
+              context.strokeStyle = `rgba(165, 235, 255, ${0.72 * (1 - dist / 320)})`;
+              context.lineWidth = 0.85;
+              context.moveTo(star.x, star.y);
+              context.lineTo(nextStar.x, nextStar.y);
+              context.stroke();
+            }
           }
         }
       }
@@ -464,6 +584,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("blur", onPointerLeave);
+    window.addEventListener("scroll", updateTargetCenter, { passive: true }); // Optimized scroll tracking
 
     frameId = window.requestAnimationFrame(drawFrame);
 
@@ -477,6 +598,7 @@ export function LiquidGlassScene({ activeSection, localeBurst }: LiquidGlassScen
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("blur", onPointerLeave);
+      window.removeEventListener("scroll", updateTargetCenter);
       if (typeof pointerMode.removeEventListener === "function") {
         pointerMode.removeEventListener("change", syncPointerMode);
       } else {

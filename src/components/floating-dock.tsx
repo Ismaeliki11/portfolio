@@ -53,32 +53,33 @@ export function FloatingDock({ navItems, activeId }: FloatingDockProps) {
         </defs>
       </svg>
 
-      <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-50 flex justify-center px-4">
-        <div className="pointer-events-auto glass-card relative mx-auto flex h-14 w-full max-w-[32.5rem] items-center justify-between rounded-full p-1">
+      <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-50 flex justify-center px-4">
+        <div className="pointer-events-auto glass-card relative mx-auto flex h-14 w-full max-w-[32.5rem] items-center justify-between rounded-full p-1 shadow-2xl">
 
           <div
             className="absolute inset-1 pointer-events-none overflow-hidden rounded-full"
-            style={{ filter: "url(#liquid-mercury-goo)" }}
+            style={{ filter: "var(--dock-filter, url(#liquid-mercury-goo))" }}
           >
-            {/* Wells: Bases líquidas estáticas */}
+            {/* Wells: Dynamic liquid bases */}
             <div className="flex h-full w-full items-center justify-around">
               {navItems.map((_, idx) => (
                 <div
                   key={`well-${idx}`}
                   className={clsx(
-                    "h-8 w-8 rounded-full transition-opacity duration-500",
-                    activeIndex === idx ? "bg-[#83f8d2] opacity-80" : "bg-white/10 opacity-40"
+                    "h-8 w-8 rounded-full transition-all duration-500",
+                    activeIndex === idx ? "bg-[#83f8d2] opacity-60" : "opacity-0"
                   )}
                 />
               ))}
             </div>
 
-            {/* The Drop: Gota viajante */}
+            {/* The Drop: Traveling mercury */}
             <motion.div
               className="absolute top-1/2 h-10 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#7ce2ff] via-[#8dfad4] to-[#99b4ff]"
               style={{
-                left: useTransform(xSpring, (val) => `${(val / navItems.length) * 100}%`),
+                left: useTransform(xSpring, (val) => `${(val / navItems.length) * 100 + (100 / navItems.length / 2)}%`),
                 width: `${100 / navItems.length}%`,
+                translateX: "-50%",
                 scaleX: stretchX,
                 scaleY: stretchY,
               }}
@@ -86,7 +87,7 @@ export function FloatingDock({ navItems, activeId }: FloatingDockProps) {
           </div>
 
           {/* Nav Items layer */}
-          <div className="relative z-10 flex w-full items-center justify-between h-full">
+          <div className="relative z-10 flex w-full h-full items-center justify-around">
             {navItems.map((item) => {
               const isActive = activeId === item.id;
               return (
@@ -94,7 +95,7 @@ export function FloatingDock({ navItems, activeId }: FloatingDockProps) {
                   key={item.id}
                   href={`#${item.id}`}
                   className={clsx(
-                    "flex flex-1 items-center justify-center h-full text-[10px] font-bold tracking-[0.16em] uppercase md:text-[11px]",
+                    "flex flex-1 items-center justify-center h-full text-[10px] font-bold tracking-[0.16em] uppercase transition-colors duration-300 md:text-[11px]",
                     isActive ? "text-[#041524]" : "text-[#c5d4f1] hover:text-white"
                   )}
                   whileTap={{ scale: 0.95 }}

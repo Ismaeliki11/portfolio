@@ -115,18 +115,50 @@ type ConstellationConnection = {
   width: number;
 };
 
-function getBubbleDynamics(baseX: number, baseY: number, pointer: SkillPointer): BubbleDynamics {
+/**
+ * Calculates dynamic properties for skill bubbles.
+ * Switched from repulsion to "Magnet" attraction for better UX.
+ */
+function getBubbleDynamics(baseX: number, baseY: number, pointer: SkillPointer, isTarget: boolean, hasGlobalTarget: boolean): BubbleDynamics {
   const dx = pointer.x - baseX;
   const dy = pointer.y - baseY;
   const distance = Math.hypot(dx, dy);
-  const influence = pointer.active ? Math.max(0, 1 - distance / 190) : 0;
-  const directionX = distance > 0 ? dx / distance : 0;
-  const directionY = distance > 0 ? dy / distance : 0;
-  const repelStrength = 28 * influence;
-  const x = baseX - directionX * repelStrength;
-  const y = baseY - directionY * repelStrength;
-  const scale = 1 + influence * 0.24;
-  const glow = 0.24 + influence * 0.42;
+
+  const influence = pointer.active ? Math.max(0, 1 - distance / 240) : 0;
+
+  let moveX = 0;
+  let moveY = 0;
+  let scale = 1;
+  let glow = 0.24 + influence * 0.4;
+
+  if (hasGlobalTarget) {
+    if (isTarget) {
+      // TARGET: Strong Magnet - Snap to cursor
+      const strength = 42; // Softened snap
+      moveX = (distance > 0 ? (dx / distance) * strength * influence : 0);
+      moveY = (distance > 0 ? (dy / distance) * strength * influence : 0);
+      scale = 1.25; // Gentle pop
+      glow = 0.8;   // High glow
+    } else {
+      // OTHERS: Soft Repulse - Nudge out of the way
+      const strength = -14; // Gentle push
+      moveX = (distance > 0 ? (dx / distance) * strength * influence : 0);
+      moveY = (distance > 0 ? (dy / distance) * strength * influence : 0);
+      scale = 0.94; // Tiny shrink
+      glow = 0.18;  // Dim slightly
+    }
+  } else {
+    // NO TARGET: Mild ambient interaction
+    // Slight repulsion to keep UI clean or slight attraction?
+    // User wants to avoid touching. Let's do mild repulsion for "clean" feel until selection
+    const strength = -12;
+    moveX = (distance > 0 ? (dx / distance) * strength * influence : 0);
+    moveY = (distance > 0 ? (dy / distance) * strength * influence : 0);
+    scale = 1 + influence * 0.1;
+  }
+
+  const x = baseX + moveX;
+  const y = baseY + moveY;
 
   return { x, y, influence, scale, glow };
 }
@@ -137,12 +169,15 @@ type OrbitBubbleProps = {
   y: number;
   scale: number;
   glow: number;
+  onHover: (skill: string | null) => void;
 };
 
-function OrbitBubble({ skill, x, y, scale, glow }: OrbitBubbleProps) {
+function OrbitBubble({ skill, x, y, scale, glow, onHover }: OrbitBubbleProps) {
   return (
     <motion.div
-      className="glass-card absolute left-1/2 top-1/2 w-[88px] -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-center text-[10px] font-semibold tracking-[0.12em] text-[#e3eeff] uppercase sm:w-[102px] sm:px-3 sm:text-[11px]"
+      className="glass-card absolute left-1/2 top-1/2 w-[88px] -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-center text-[10px] font-semibold tracking-[0.12em] text-[#e3eeff] uppercase sm:w-[102px] sm:px-3 sm:text-[11px] cursor-pointer"
+      onMouseEnter={() => onHover(skill)}
+      onMouseLeave={() => onHover(null)}
       style={{
         boxShadow: `0 0 ${10 + glow * 24}px rgba(137, 228, 255, ${glow})`,
       }}
@@ -161,15 +196,16 @@ type SkillReactorProps = {
   kicker: string;
   core: string;
   orbitSkills: string[];
+  onHoverSkill: (skill: string | null) => void;
 };
 
-function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
+function SkillReactor({ kicker, core, orbitSkills, onHoverSkill }: SkillReactorProps) {
   const reactorRef = useRef<HTMLDivElement>(null);
   const [reactorSize, setReactorSize] = useState(420);
   const [isCoarsePointer, setIsCoarsePointer] = useState(false);
   const [pointer, setPointer] = useState<SkillPointer>({ x: 0, y: 0, active: false });
-  const outerRadius = Math.max(88, Math.min(148, reactorSize * 0.36));
-  const innerRadius = Math.max(66, Math.min(108, reactorSize * 0.27));
+  const outerRadius = Math.max(92, Math.min(160, reactorSize * 0.38));
+  const innerRadius = Math.max(68, Math.min(115, reactorSize * 0.28));
 
   useEffect(() => {
     const element = reactorRef.current;
@@ -221,11 +257,31 @@ function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
     [innerRadius, orbitSkills, outerRadius],
   );
   const bubblePoints = useMemo(
-    () =>
-      orbitPoints.map((item) => {
-        const dynamics = getBubbleDynamics(item.x, item.y, pointer);
+    () => {
+      // 1. Identify if we have a clear target
+      let closestIndex = -1;
+      let minDistance = Infinity;
+
+      for (let i = 0; i < orbitPoints.length; i++) {
+        const dx = pointer.x - orbitPoints[i].x;
+        const dy = pointer.y - orbitPoints[i].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIndex = i;
+        }
+      }
+
+      // "Lock on" if close enough (e.g. 100px)
+      const targetIndex = (pointer.active && minDistance < 100) ? closestIndex : -1;
+      const hasGlobalTarget = targetIndex !== -1;
+
+      return orbitPoints.map((item, index) => {
+        const isTarget = index === targetIndex;
+        const dynamics = getBubbleDynamics(item.x, item.y, pointer, isTarget, hasGlobalTarget);
         return { ...item, ...dynamics };
-      }),
+      });
+    },
     [orbitPoints, pointer],
   );
   const constellationConnections = useMemo(() => {
@@ -356,7 +412,7 @@ function SkillReactor({ kicker, core, orbitSkills }: SkillReactorProps) {
       </svg>
 
       {bubblePoints.map((item) => (
-        <OrbitBubble key={item.skill} skill={item.skill} x={item.x} y={item.y} scale={item.scale} glow={item.glow} />
+        <OrbitBubble key={item.skill} skill={item.skill} x={item.x} y={item.y} scale={item.scale} glow={item.glow} onHover={onHoverSkill} />
       ))}
     </div>
   );
@@ -379,6 +435,9 @@ export function PortfolioExperience() {
   });
   const [localeBurst, setLocaleBurst] = useState<{ id: number; x: number; y: number } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionId>("hero");
+  const [hoveredSkill, setHoveredSkill] = useState<string | null>(null);
+
+  const profileCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.localStorage.setItem("portfolio-locale", locale);
@@ -409,7 +468,7 @@ export function PortfolioExperience() {
         }
       },
       {
-        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        threshold: [0, 0.25, 0.5, 0.75, 1.0],
       },
     );
 
@@ -432,7 +491,7 @@ export function PortfolioExperience() {
       observer.disconnect();
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []); // Only once, as IDs don't change
+  }, [locale]); // Fix: Re-run when locale changes because elements remount
 
   const handleLocaleChange = (nextLocale: SiteLocale, origin: LocaleSwitchOrigin) => {
     if (nextLocale === locale) {
@@ -452,7 +511,12 @@ export function PortfolioExperience() {
   return (
     <SmoothScroll>
       <div className="relative isolate pb-40 md:pb-32">
-        <LiquidGlassScene activeSection={activeSection} localeBurst={localeBurst} />
+        <LiquidGlassScene
+          activeSection={activeSection}
+          localeBurst={localeBurst}
+          hoveredSkill={hoveredSkill}
+          targetElementRef={profileCardRef}
+        />
         <CommandPalette locale={locale} copy={copy.commandPalette} />
 
         <AnimatePresence mode="wait" initial={false}>
@@ -620,21 +684,55 @@ export function PortfolioExperience() {
                 className="section-shell scroll-mt-28 grid gap-6 md:scroll-mt-32 md:grid-cols-[0.95fr_1.05fr] md:items-center md:gap-8"
               >
                 <Reveal>
-                  <div className="glass-card rounded-[2rem] p-6 md:p-8">
-                    <p className="text-xs font-semibold tracking-[0.24em] text-[#8ea7d3] uppercase">{copy.about.kicker}</p>
-                    <h2 className="mt-3 pb-[0.04em] text-3xl leading-[1.12] text-[#f0f6ff] sm:text-4xl sm:leading-[1.08]">
-                      {copy.about.title}
-                    </h2>
-                    <div className="mt-7 space-y-6">
-                      {copy.about.experiences.map((item) => (
-                        <div key={item.year + item.title} className="relative pl-5">
-                          <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-[#8ef0da] shadow-[0_0_12px_rgba(142,240,218,0.8)]" />
-                          <div className="text-[11px] font-semibold tracking-[0.2em] text-[#8aa5d3] uppercase">{item.year}</div>
-                          <div className="mt-1 text-lg font-semibold text-[#eaf2ff] sm:text-xl">{item.title}</div>
-                          <p className="text-muted mt-2 text-sm leading-relaxed">{item.detail}</p>
-                        </div>
-                      ))}
-                    </div>
+                  <div
+                    ref={profileCardRef}
+                    className="glass-card relative min-h-[460px] rounded-[2rem] p-6 md:p-8 overflow-hidden transition-colors duration-500"
+                    style={{
+                      background: hoveredSkill ? "rgba(10, 15, 28, 0.4)" : undefined,
+                      backdropFilter: hoveredSkill ? "blur(4px)" : undefined
+                    }}>
+                    <motion.div
+                      key="profile-content"
+                      animate={{
+                        opacity: hoveredSkill ? 0 : 1,
+                        x: hoveredSkill ? -20 : 0,
+                        filter: hoveredSkill ? "blur(4px)" : "blur(0px)",
+                      }}
+                      transition={{ duration: 0.4 }}
+                      style={{ pointerEvents: hoveredSkill ? "none" : "auto" }}
+                    >
+                      <p className="text-xs font-semibold tracking-[0.24em] text-[#8ea7d3] uppercase">{copy.about.kicker}</p>
+                      <h2 className="mt-3 pb-[0.04em] text-3xl leading-[1.12] text-[#f0f6ff] sm:text-4xl sm:leading-[1.08]">
+                        {copy.about.title}
+                      </h2>
+                      <div className="mt-7 space-y-6">
+                        {copy.about.experiences.map((item) => (
+                          <div key={item.year + item.title} className="relative pl-5">
+                            <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-[#8ef0da] shadow-[0_0_12px_rgba(142,240,218,0.8)]" />
+                            <div className="text-[11px] font-semibold tracking-[0.2em] text-[#8aa5d3] uppercase">{item.year}</div>
+                            <div className="mt-1 text-lg font-semibold text-[#eaf2ff] sm:text-xl">{item.title}</div>
+                            <p className="text-muted mt-2 text-sm leading-relaxed">{item.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+
+                    <AnimatePresence>
+                      {hoveredSkill && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.3 }}
+                          className="absolute inset-0 flex items-center justify-center p-8"
+                        >
+                          <div className="text-center">
+                            <div className="text-[10px] font-semibold tracking-[0.24em] text-[#8ea7d3] uppercase">Analyzing Node</div>
+                            <div className="mt-2 text-3xl font-bold text-[#d4e5ff] tracking-tight">{hoveredSkill}</div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </Reveal>
 
@@ -643,6 +741,7 @@ export function PortfolioExperience() {
                     kicker={copy.skillReactor.kicker}
                     core={copy.skillReactor.core}
                     orbitSkills={copy.skillReactor.orbitSkills}
+                    onHoverSkill={setHoveredSkill}
                   />
                 </Reveal>
               </section>

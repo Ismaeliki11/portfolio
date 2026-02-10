@@ -142,32 +142,56 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
     },
     projects: {
       kicker: "Trabajo seleccionado",
-      title: "Case Studies",
+      title: "Proyectos Reales",
       description: "Cada proyecto combina arquitectura escalable, motion system y experiencia visual orientada a objetivos de negocio.",
       items: [
         {
-          title: "Nebula Commerce",
-          type: "E-commerce en tiempo real",
+          title: "Gran Casino Totana",
+          type: "Institucional & Patrimonio",
           summary:
-            "Storefront con streaming de inventario, checkout desacoplado y animaciones fluidas para una tasa de conversion mas alta.",
-          stack: sharedStacks.nebula,
-          impact: "+29% conversion",
+            "Plataforma digital para una institución centenaria. Incluye timeline histórico interactivo, gestión de socios y sistema de diseño 'LiquidGlass'.",
+          stack: ["Next.js 16", "React 19", "Tailwind v4", "Framer Motion"],
+          impact: "Digitalización Legado 1917",
         },
         {
-          title: "Pulse Studio",
-          type: "Plataforma para creadores",
+          title: "WebP Lab Pro",
+          type: "Image Optimization Suite",
           summary:
-            "Panel para creadores con editor visual, previews instantaneas y sistema de plantillas escalable para equipos.",
-          stack: sharedStacks.pulse,
-          impact: "3x velocidad de publicacion",
+            "Motor de procesamiento de imágenes de alto rendimiento con optimización por lotes, smart cropping y edición acelerada por hardware.",
+          stack: ["Next.js 15", "Sharp", "SVGO", "TypeScript"],
+          impact: "Procesamiento Sin Latencia",
         },
         {
-          title: "Astra Ops",
-          type: "Dashboard SaaS",
+          title: "Ayto. de Totana",
+          type: "Administración Pública",
           summary:
-            "Observabilidad operativa con estados en vivo, rutas de incidentes y visualizaciones adaptadas al rol de usuario.",
-          stack: sharedStacks.astra,
-          impact: "-42% tiempo de respuesta",
+            "Modernización del portal ciudadano enfocada en la transparencia, agenda cultural dinámica y digitalización de servicios municipales.",
+          stack: ["Next.js", "React 19", "Tailwind v4", "Lucide"],
+          impact: "UX Ciudadana Mejorada",
+        },
+        {
+          title: "Karma Estética",
+          type: "E-commerce & Servicios",
+          summary:
+            "Presencia digital premium para clínica estética. Sistema de reservas integrado, catálogo de tratamientos y narrativa visual inmersiva.",
+          stack: ["Next.js", "Framer Motion", "Tailwind v4", "Vercel"],
+          impact: "Identidad Visual Elevada",
+        },
+        {
+          title: "TimeTracker",
+          type: "Productivity App",
+          summary:
+            "Aplicación web avanzada para el registro y análisis de periodos de tiempo, diseñada para el control total de la productividad diaria.",
+          stack: ["React", "TypeScript", "Node.js", "Zustand"],
+          impact: "Control de Tiempos Preciso",
+        },
+        {
+          title: "Pomodoro App",
+          type: "Focused Work Tool",
+          summary:
+            "Herramienta interconectada con TimeTracker para gestionar sesiones de enfoque mediante la técnica Pomodoro con sincronización en tiempo real.",
+          stack: ["Next.js", "Motion", "Web API", "Tailwind"],
+          impact: "Flujo de Enfoque Continuo",
         },
       ],
     },
@@ -195,7 +219,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
     skillReactor: {
       kicker: "Skill Reactor",
       core: "Liquid Core",
-      orbitSkills: ["Next.js", "TypeScript", "Three.js", "R3F", "Shaders", "Framer Motion", "Node", "Postgres", "Design Systems", "Performance"],
+      orbitSkills: ["Next.js", "TypeScript", "React 19", "Tailwind v4", "Framer Motion", "Sharp", "Node.js", "UI/UX", "Vercel", "SVGO"],
     },
     contact: {
       kicker: "Contact Orb",
@@ -263,32 +287,56 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
     },
     projects: {
       kicker: "Selected work",
-      title: "Case Studies",
+      title: "Real Projects",
       description: "Each project blends scalable architecture, motion systems, and visual design built around business outcomes.",
       items: [
         {
-          title: "Nebula Commerce",
-          type: "Realtime e-commerce",
+          title: "Gran Casino Totana",
+          type: "Institutional & Heritage",
           summary:
-            "Storefront with live inventory streaming, decoupled checkout, and fluid animation tuned for higher conversion rates.",
-          stack: sharedStacks.nebula,
-          impact: "+29% conversion",
+            "Digital platform for a century-old institution. Features an interactive historical timeline, membership management, and the 'LiquidGlass' design system.",
+          stack: ["Next.js 16", "React 19", "Tailwind v4", "Framer Motion"],
+          impact: "1917 Legacy Digitalized",
         },
         {
-          title: "Pulse Studio",
-          type: "Creator platform",
+          title: "WebP Lab Pro",
+          type: "Image Optimization Suite",
           summary:
-            "Creator dashboard with a visual editor, instant previews, and a scalable template system for growing teams.",
-          stack: sharedStacks.pulse,
-          impact: "3x publishing speed",
+            "High-performance image processing engine featuring batch optimization, smart entropy cropping, and hardware-accelerated editing.",
+          stack: ["Next.js 15", "Sharp", "SVGO", "TypeScript"],
+          impact: "Zero-Latency Processing",
         },
         {
-          title: "Astra Ops",
-          type: "SaaS dashboard",
+          title: "Totana Town Hall",
+          type: "Public Administration",
           summary:
-            "Operational observability with live state updates, incident routing, and role-aware visualizations.",
-          stack: sharedStacks.astra,
-          impact: "-42% response time",
+            "Citizen portal modernization focused on transparency, dynamic cultural agenda, and digitization of municipal services.",
+          stack: ["Next.js", "React 19", "Tailwind v4", "Lucide"],
+          impact: "Enhanced Citizen UX",
+        },
+        {
+          title: "Karma Aesthetics",
+          type: "E-commerce & Services",
+          summary:
+            "Premium digital presence for an aesthetic clinic. Integrated booking system, treatment catalog, and immersive visual storytelling.",
+          stack: ["Next.js", "Framer Motion", "Tailwind v4", "Vercel"],
+          impact: "Elevated Visual Identity",
+        },
+        {
+          title: "TimeTracker",
+          type: "Productivity App",
+          summary:
+            "Advanced web application for time tracking and analysis, designed for total control over daily productivity and workflows.",
+          stack: ["React", "TypeScript", "Node.js", "Zustand"],
+          impact: "Precise Time Control",
+        },
+        {
+          title: "Pomodoro App",
+          type: "Focused Work Tool",
+          summary:
+            "Productivity tool interconnected with TimeTracker to manage focus sessions using the Pomodoro technique with real-time sync.",
+          stack: ["Next.js", "Motion", "Web API", "Tailwind"],
+          impact: "Seamless Focus Flow",
         },
       ],
     },
@@ -316,7 +364,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
     skillReactor: {
       kicker: "Skill Reactor",
       core: "Liquid Core",
-      orbitSkills: ["Next.js", "TypeScript", "Three.js", "R3F", "Shaders", "Framer Motion", "Node", "Postgres", "Design Systems", "Performance"],
+      orbitSkills: ["Next.js", "TypeScript", "React 19", "Tailwind v4", "Framer Motion", "Sharp", "Node.js", "UI/UX", "Vercel", "SVGO"],
     },
     contact: {
       kicker: "Contact Orb",
