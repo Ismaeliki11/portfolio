@@ -1,8 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, useSpring, useTransform } from "framer-motion";
+import { useEffect, useMemo } from "react";
 import type { NavItem } from "@/lib/site-copy";
 
 type FloatingDockProps = {
@@ -11,49 +11,103 @@ type FloatingDockProps = {
 };
 
 export function FloatingDock({ navItems, activeId }: FloatingDockProps) {
+  const activeIndex = useMemo(() => navItems.findIndex((i) => i.id === activeId), [navItems, activeId]);
 
+  // Físicas: Muy reactivas pero con inercia para que parezca líquido pesado
+  const xSpring = useSpring(activeIndex, {
+    stiffness: 350,
+    damping: 30,
+    mass: 1.1
+  });
+
+  useEffect(() => {
+    xSpring.set(activeIndex);
+  }, [activeIndex, xSpring]);
+
+  // Factor de estiramiento horizontal (chiche)
+  const stretchX = useTransform(xSpring, (val) => {
+    const d = Math.abs(val - Math.round(val));
+    return 1 + d * 1.5;
+  });
+
+  // Factor de compresión vertical (conservación de masa)
+  const stretchY = useTransform(xSpring, (val) => {
+    const d = Math.abs(val - Math.round(val));
+    return 1 - d * 0.3;
+  });
 
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.6rem)] z-50 flex justify-center px-3 sm:px-4">
-      <div className="pointer-events-auto glass-card mx-auto flex w-full max-w-[32rem] items-center justify-between gap-1 rounded-full p-1.5 sm:justify-center sm:gap-2">
-        {navItems.map((item) => {
-          const isActive = activeId === item.id;
+    <>
+      <svg className="pointer-events-none absolute h-0 w-0" aria-hidden="true">
+        <defs>
+          <filter id="liquid-mercury-goo">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="blur" />
+            <feColorMatrix
+              in="blur"
+              mode="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 30 -14"
+              result="goo"
+            />
+            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+          </filter>
+        </defs>
+      </svg>
 
-          return (
-            <motion.a
-              key={item.id}
-              href={`#${item.id}`}
-              aria-label={item.label}
-              className={clsx(
-                "relative flex min-w-0 flex-1 items-center justify-center rounded-full px-2.5 py-2 text-[10px] font-semibold tracking-[0.12em] uppercase transition-colors sm:flex-none sm:px-3.5 sm:text-xs sm:tracking-[0.16em] md:min-w-24",
-                isActive ? "text-[#041524]" : "text-[#c5d4f1]",
-              )}
-              whileHover={{ y: -3, scale: 1.04 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {isActive && (
-                <motion.span
-                  layoutId="dock-active"
-                  className="absolute inset-0 rounded-full bg-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-md"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      <nav className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-50 flex justify-center px-4">
+        <div className="pointer-events-auto glass-card relative mx-auto flex h-14 w-full max-w-[32.5rem] items-center justify-between rounded-full p-1">
+
+          <div
+            className="absolute inset-1 pointer-events-none overflow-hidden rounded-full"
+            style={{ filter: "url(#liquid-mercury-goo)" }}
+          >
+            {/* Wells: Bases líquidas estáticas */}
+            <div className="flex h-full w-full items-center justify-around">
+              {navItems.map((_, idx) => (
+                <div
+                  key={`well-${idx}`}
+                  className={clsx(
+                    "h-8 w-8 rounded-full transition-opacity duration-500",
+                    activeIndex === idx ? "bg-[#83f8d2] opacity-80" : "bg-white/10 opacity-40"
+                  )}
+                />
+              ))}
+            </div>
+
+            {/* The Drop: Gota viajante */}
+            <motion.div
+              className="absolute top-1/2 h-10 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#7ce2ff] via-[#8dfad4] to-[#99b4ff]"
+              style={{
+                left: useTransform(xSpring, (val) => `${(val / navItems.length) * 100}%`),
+                width: `${100 / navItems.length}%`,
+                scaleX: stretchX,
+                scaleY: stretchY,
+              }}
+            />
+          </div>
+
+          {/* Nav Items layer */}
+          <div className="relative z-10 flex w-full items-center justify-between h-full">
+            {navItems.map((item) => {
+              const isActive = activeId === item.id;
+              return (
+                <motion.a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  className={clsx(
+                    "flex flex-1 items-center justify-center h-full text-[10px] font-bold tracking-[0.16em] uppercase md:text-[11px]",
+                    isActive ? "text-[#041524]" : "text-[#c5d4f1] hover:text-white"
+                  )}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7de2ff]/90 via-[#88f8d4]/90 to-[#95b3ff]/90" />
-                  <div className="absolute inset-0 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]" />
-                </motion.span>
-              )}
-              <motion.span
-                animate={{ color: isActive ? "#041524" : "#c5d4f1" }}
-                className="relative z-10 flex items-center"
-              >
-                <span className="md:hidden">{item.label}</span>
-                <span className="hidden md:inline">{item.key}</span>
-                <span className="ml-2 hidden tracking-[0.08em] md:inline">{item.label}</span>
-              </motion.span>
-            </motion.a>
-          );
-        })}
-      </div>
-    </nav>
+                  <span className="md:hidden">{item.label}</span>
+                  <span className="hidden md:inline">{item.key || (navItems.indexOf(item) + 1).toString().padStart(2, '0')}</span>
+                  <span className="ml-2 hidden tracking-[0.08em] md:inline">{item.label}</span>
+                </motion.a>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+    </>
   );
 }
