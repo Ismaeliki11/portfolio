@@ -46,16 +46,16 @@ type LiquidGlassSceneProps = {
 };
 
 function createStars(width: number, height: number, isCoarsePointer: boolean) {
-  const minCount = isCoarsePointer ? 90 : 140;
-  const maxCount = isCoarsePointer ? 220 : 320;
-  const density = isCoarsePointer ? 7800 : 6200;
+  const minCount = isCoarsePointer ? 120 : 180;
+  const maxCount = isCoarsePointer ? 280 : 450;
+  const density = isCoarsePointer ? 6000 : 4200;
   const count = Math.max(minCount, Math.min(maxCount, Math.floor((width * height) / density)));
   const stars: Star[] = [];
 
   for (let index = 0; index < count; index += 1) {
     const x = Math.random() * width;
     const y = Math.random() * height;
-    const depth = 0.55 + Math.random() * 1.1;
+    const depth = 0.4 + Math.random() * 1.2;
 
     stars.push({
       x,
@@ -64,9 +64,9 @@ function createStars(width: number, height: number, isCoarsePointer: boolean) {
       baseY: y,
       vx: 0,
       vy: 0,
-      size: 0.5 + Math.random() * 1.8,
-      alpha: 0.28 + Math.random() * 0.62,
-      twinkle: 0.5 + Math.random() * 1.4,
+      size: 0.6 + Math.random() * 1.8,
+      alpha: 0.35 + Math.random() * 0.55,
+      twinkle: 0.5 + Math.random() * 1.5,
       phase: Math.random() * Math.PI * 2,
       depth,
     });
@@ -122,8 +122,8 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
   const haloPrimaryY = useTransform(haloY, (value) => value - 210);
   const haloSecondaryX = useTransform(trailX, (value) => value - 130);
   const haloSecondaryY = useTransform(trailY, (value) => value - 130);
-  const haloPrimaryOpacity = useTransform(presence, (value) => 0.2 + value * 0.56);
-  const haloSecondaryOpacity = useTransform(presence, (value) => 0.08 + value * 0.45);
+  const haloPrimaryOpacity = useTransform(presence, (value) => 0.15 + value * 0.45);
+  const haloSecondaryOpacity = useTransform(presence, (value) => 0.06 + value * 0.32);
 
   useEffect(() => {
     if (!activeSection) {
@@ -212,21 +212,24 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
         points: shape.map(p => ({ x: p.x * shapeScale, y: p.y * shapeScale }))
       };
     } else if (hoveredProjectElement) {
-      // Generate RELATIVE points around (0,0) based on card size
+      // OUT-OF-THE-BOX: Instead of framing the card, create a soft elliptical nebula
       const rect = hoveredProjectElement.getBoundingClientRect();
-      const margin = 16;
-      const w = rect.width + margin * 2;
-      const h = rect.height + margin * 2;
-      const ox = -w / 2;
-      const oy = -h / 2;
-
       const points: { x: number; y: number }[] = [];
-      const steps = 6;
+      const count = 48;
 
-      for (let i = 0; i <= steps; i++) points.push({ x: ox + (w * i) / steps, y: oy });
-      for (let i = 1; i <= steps; i++) points.push({ x: ox + w, y: oy + (h * i) / steps });
-      for (let i = 1; i <= steps; i++) points.push({ x: ox + w - (w * i) / steps, y: oy + h });
-      for (let i = 1; i < steps; i++) points.push({ x: ox, y: oy + h - (h * i) / steps });
+      for (let i = 0; i < count; i++) {
+        // Distribute points in a thick, soft elliptical shell
+        const angle = Math.random() * Math.PI * 2;
+        // Vary the "thickness" of the shell significantly
+        const spread = 20 + Math.pow(Math.random(), 1.5) * 85;
+        const rx = rect.width / 2 + spread;
+        const ry = rect.height / 2 + spread;
+
+        points.push({
+          x: Math.cos(angle) * rx,
+          y: Math.sin(angle) * ry
+        });
+      }
 
       formationRef.current = {
         active: true,
@@ -296,20 +299,30 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
     };
 
     const updatePerformance = (elapsedMs: number) => {
-      if (isLowPerfRef.current) return;
+      // Ignore frames that are clearly just tab switches or major OS stutters (> 200ms)
+      if (elapsedMs > 200) {
+        frameTimesRef.current = []; // Clear history on major skips
+        return;
+      }
 
       const frameTimes = frameTimesRef.current;
       frameTimes.push(elapsedMs);
 
-      if (frameTimes.length > 60) {
+      // Analyze every 100 frames (~1.6s)
+      if (frameTimes.length > 100) {
         const avgFrameTime = frameTimes.reduce((a, b) => a + b) / frameTimes.length;
-        // If average frame time is > 30ms (~33fps), switch to low-perf
-        if (avgFrameTime > 30) {
+
+        if (!isLowPerfRef.current && avgFrameTime > 33) { // Below 30fps
           isLowPerfRef.current = true;
           document.documentElement.setAttribute("data-low-perf", "true");
-          resize(); // Re-calculate stars and DPR
+          resize();
+        } else if (isLowPerfRef.current && avgFrameTime < 16) { // Back to stable ~60fps
+          // Allow recovery if performance headroom is significant
+          isLowPerfRef.current = false;
+          document.documentElement.removeAttribute("data-low-perf");
+          resize();
         }
-        frameTimes.length = 0; // Reset for periodic check
+        frameTimes.length = 0;
       }
     };
 
@@ -366,11 +379,19 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
 
     const drawFrame = (time: number) => {
       const elapsedMs = time - previousTime;
-      const delta = Math.min(elapsedMs / 16.666, 2.2);
-      const deltaSeconds = elapsedMs / 1000;
       previousTime = time;
 
-      updatePerformance(elapsedMs);
+      // Skip performance penalty if tab was inactive (visibility hidden or long pause)
+      if (document.visibilityState === "visible" && elapsedMs < 250) {
+        updatePerformance(elapsedMs);
+      } else {
+        frameTimesRef.current = []; // Reset performance window
+        frameId = window.requestAnimationFrame(drawFrame);
+        return;
+      }
+
+      const delta = Math.min(elapsedMs / 16.666, 2.2);
+      const deltaSeconds = elapsedMs / 1000;
 
       const stars = starsRef.current;
       const pointer = pointerRef.current;
@@ -464,14 +485,21 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
               targetX = cx + pt.x + (Math.random() - 0.5) * 6;
               targetY = cy + pt.y + (Math.random() - 0.5) * 6;
             } else if (elementRef.current) {
-              // Project rect: points are relative, center is live from element ref
+              // Project nebula: Move with a "flow" pattern
               const rect = elementRef.current.getBoundingClientRect();
               const cx = rect.left + rect.width / 2;
               const cy = rect.top + rect.height / 2;
-              targetX = cx + pt.x + (Math.random() - 0.5) * 6;
-              targetY = cy + pt.y + (Math.random() - 0.5) * 6;
+
+              // Organic orbital flow
+              const timeFactor = time * 0.0006;
+              const orbitAngle = timeFactor * (0.4 + star.depth * 0.3) + (index * 0.15);
+              const driftX = Math.sin(orbitAngle) * 15;
+              const driftY = Math.cos(orbitAngle * 0.8) * 15;
+
+              targetX = cx + pt.x + driftX;
+              targetY = cy + pt.y + driftY;
+              forceScale = 0.03 + star.depth * 0.012;
             }
-            forceScale = 0.045 + star.depth * 0.02;
           }
         }
 
@@ -529,8 +557,9 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
 
         const isInFormation = formation.active && index < formation.points.length * 6;
         const twinkle = 0.72 + Math.sin(time * 0.001 * star.twinkle + star.phase) * 0.28;
-        const alpha = star.alpha * twinkle * (isInFormation ? 1.5 : 1);
-        const size = star.size * (isInFormation ? 2.2 : 1);
+        // Make formation stars subtler, not brighter
+        const alpha = star.alpha * twinkle * (isInFormation ? 0.85 : 1);
+        const size = star.size * (isInFormation ? 1.4 : 1);
 
         // Skip complex star drawing on low performance
         if (!isLowPerf && warpEnergy > 0.05) {
@@ -543,21 +572,35 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
           context.stroke();
         }
 
+        const starAlpha = isInFormation ? alpha * 1.2 : alpha;
+        const colorBase = isInFormation
+          ? (index % 2 === 0 ? "160, 245, 255" : "200, 255, 245")
+          : "235, 245, 255";
+        const starHalfRadius = size * (isInFormation ? 1.5 : 1.2);
+
+        // SHARP BUT SOFT: Clear center, soft halo
+        const gradient = context.createRadialGradient(
+          star.x, star.y, 0,
+          star.x, star.y, starHalfRadius
+        );
+        gradient.addColorStop(0, `rgba(${colorBase}, ${starAlpha})`);
+        gradient.addColorStop(0.25, `rgba(${colorBase}, ${starAlpha * 0.5})`);
+        gradient.addColorStop(1, `rgba(${colorBase}, 0)`);
+
         context.beginPath();
-        context.fillStyle = isInFormation ? `rgba(160, 240, 255, ${alpha * 1.2})` : `rgba(214, 237, 255, ${alpha})`;
-        context.arc(star.x, star.y, size, 0, Math.PI * 2);
+        context.fillStyle = gradient;
+        context.arc(star.x, star.y, starHalfRadius, 0, Math.PI * 2);
         context.fill();
 
         if (!isLowPerf && (pointer.intensity > 0.01 || isInFormation)) {
           const distanceToPointer = Math.hypot(star.x - pointer.x, star.y - pointer.y);
-          const glowRadius = isInFormation ? size * 5.2 : repulseRadius * 0.7;
+          const glowRadius = isInFormation ? size * 6.5 : repulseRadius * 0.7;
 
           if (isInFormation || distanceToPointer < glowRadius) {
-            const glow = isInFormation ? 0.6 : (1 - distanceToPointer / glowRadius) * 0.7 * pointer.intensity * pointerForceScale;
+            const glowIntensity = isInFormation ? 0.5 : (1 - distanceToPointer / glowRadius) * 0.7 * pointer.intensity * pointerForceScale;
             context.beginPath();
-            // Reduce glow opacity for formation to prevent blob effect
-            context.fillStyle = `rgba(138, 228, 255, ${glow * (isInFormation ? 0.15 : 0.35)})`;
-            context.arc(star.x, star.y, size * (isInFormation ? 4.0 : 4.8), 0, Math.PI * 2);
+            context.fillStyle = `rgba(138, 228, 255, ${glowIntensity * (isInFormation ? 0.12 : 0.32)})`;
+            context.arc(star.x, star.y, size * (isInFormation ? 5.0 : 4.4), 0, Math.PI * 2);
             context.fill();
           }
         }
@@ -611,6 +654,13 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
       pointerMode.addListener(syncPointerMode);
     }
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        previousTime = performance.now();
+        frameTimesRef.current = [];
+      }
+    };
+
     resize();
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -620,6 +670,7 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("blur", onPointerLeave);
+    window.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("scroll", updateTargetCenter, { passive: true }); // Optimized scroll tracking
 
     frameId = window.requestAnimationFrame(drawFrame);
@@ -634,6 +685,7 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("blur", onPointerLeave);
+      window.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("scroll", updateTargetCenter);
       if (typeof pointerMode.removeEventListener === "function") {
         pointerMode.removeEventListener("change", syncPointerMode);
