@@ -436,6 +436,7 @@ export function PortfolioExperience() {
   const [localeBurst, setLocaleBurst] = useState<{ id: number; x: number; y: number } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionId>("hero");
   const [hoveredSkill, setHoveredSkill] = useState<string | null>(null);
+  const [hoveredProjectElement, setHoveredProjectElement] = useState<HTMLElement | null>(null);
 
   const profileCardRef = useRef<HTMLDivElement>(null);
 
@@ -516,6 +517,7 @@ export function PortfolioExperience() {
           localeBurst={localeBurst}
           hoveredSkill={hoveredSkill}
           targetElementRef={profileCardRef}
+          hoveredProjectElement={hoveredProjectElement}
         />
         <CommandPalette locale={locale} copy={copy.commandPalette} />
 
@@ -655,9 +657,18 @@ export function PortfolioExperience() {
                   {copy.projects.items.map((project, index) => (
                     <Reveal key={project.title} delay={index * 0.08}>
                       <TiltCard className="h-full rounded-[1.6rem]">
-                        <div className="glass-card flex h-full flex-col rounded-[1.6rem] p-5 sm:p-6">
+                        <a
+                          href={project.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="glass-card group flex h-full flex-col rounded-[1.6rem] p-5 sm:p-6 transition-all duration-300 hover:bg-[#ffffff08]"
+                          onMouseEnter={(e) => {
+                            setHoveredProjectElement(e.currentTarget);
+                          }}
+                          onMouseLeave={() => setHoveredProjectElement(null)}
+                        >
                           <p className="text-[11px] font-semibold tracking-[0.22em] text-[#87a3d1] uppercase">{project.type}</p>
-                          <h3 className="mt-3 text-xl text-[#eef4ff] sm:text-2xl">{project.title}</h3>
+                          <h3 className="mt-3 text-xl text-[#eef4ff] transition-colors group-hover:text-[#7ce1ff] sm:text-2xl">{project.title}</h3>
                           <p className="text-muted mt-4 text-sm leading-relaxed">{project.summary}</p>
 
                           <div className="mt-5 flex flex-wrap gap-2">
@@ -671,8 +682,14 @@ export function PortfolioExperience() {
                             ))}
                           </div>
 
-                          <div className="mt-auto pt-7 text-sm font-semibold text-[#8de9d8]">{project.impact}</div>
-                        </div>
+                          <div className="mt-auto flex items-center justify-between pt-7">
+                            <div className="text-sm font-semibold text-[#8de9d8]">{project.impact}</div>
+                            <div className="flex items-center gap-1 text-[10px] font-bold tracking-wider text-[#7ce1ff] opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100">
+                              VISITAR
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                            </div>
+                          </div>
+                        </a>
                       </TiltCard>
                     </Reveal>
                   ))}

@@ -16,6 +16,7 @@ export type ProjectItem = {
   summary: string;
   stack: string[];
   impact: string;
+  url: string;
 };
 
 export type ExperienceItem = {
@@ -152,6 +153,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Web para un casino social fundado en 1917. Tiene un timeline historico interactivo, gestion de socios y el sistema de diseno que use para este portfolio.",
           stack: ["Next.js 16", "React 19", "Tailwind v4", "Framer Motion"],
           impact: "En produccion",
+          url: "https://gran-casino.vercel.app/",
         },
         {
           title: "WebP Lab Pro",
@@ -160,6 +162,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Herramienta para convertir y optimizar imagenes en lote. Recorte inteligente, edicion basica y conversion a WebP/AVIF con Sharp por detras.",
           stack: ["Next.js 15", "Sharp", "SVGO", "TypeScript"],
           impact: "Uso personal diario",
+          url: "https://web-p-lab.vercel.app/",
         },
         {
           title: "Ayto. de Totana",
@@ -168,6 +171,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Rediseno del portal web del ayuntamiento. Agenda cultural, noticias, transparencia y un panel para que el equipo actualice contenido sin tocar codigo.",
           stack: ["Next.js", "React 19", "Tailwind v4", "Lucide"],
           impact: "Propuesta entregada",
+          url: "https://web-totana.vercel.app/",
         },
         {
           title: "Karma Estetica",
@@ -176,14 +180,16 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Web para una clinica de estetica local. Catalogo de tratamientos, reservas online y una estetica visual que refleja la marca del negocio.",
           stack: ["Next.js", "Framer Motion", "Tailwind v4", "Vercel"],
           impact: "Cliente satisfecho",
+          url: "https://karmasalon.vercel.app/",
         },
         {
           title: "TimeTracker",
           type: "App de productividad",
           summary:
-            "App que uso yo mismo para registrar en que gasto el tiempo. Cronometros, categorias, graficas diarias y exportacion de datos.",
+            "App que uso yo mismo para registrar en que gasto el tiempo. Cronometros, categorías, gráficas diarias y exportacion de datos.",
           stack: ["React", "TypeScript", "Node.js", "Zustand"],
           impact: "Uso propio",
+          url: "https://time-tracker-ismaeliki.vercel.app/spaces",
         },
         {
           title: "Pomodoro App",
@@ -192,6 +198,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Complemento del TimeTracker. Sesiones Pomodoro con temporizador, pausas automaticas y sincronizacion con el tracker principal.",
           stack: ["Next.js", "Motion", "Web API", "Tailwind"],
           impact: "Integrado con TimeTracker",
+          url: "https://pomodoro-ismaeliki.vercel.app/login",
         },
       ],
     },
@@ -297,6 +304,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Website for a social club founded in 1917. Interactive historical timeline, member management and the design system I used for this portfolio.",
           stack: ["Next.js 16", "React 19", "Tailwind v4", "Framer Motion"],
           impact: "In production",
+          url: "https://gran-casino.vercel.app/",
         },
         {
           title: "WebP Lab Pro",
@@ -305,6 +313,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Tool for batch converting and optimizing images. Smart cropping, basic editing and WebP/AVIF conversion powered by Sharp.",
           stack: ["Next.js 15", "Sharp", "SVGO", "TypeScript"],
           impact: "Daily personal use",
+          url: "https://web-p-lab.vercel.app/",
         },
         {
           title: "Totana Town Hall",
@@ -313,6 +322,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Redesign of the town council website. Cultural agenda, news, transparency section and a panel so staff can update content without touching code.",
           stack: ["Next.js", "React 19", "Tailwind v4", "Lucide"],
           impact: "Proposal delivered",
+          url: "https://web-totana.vercel.app/",
         },
         {
           title: "Karma Aesthetics",
@@ -321,6 +331,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Website for a local aesthetics clinic. Treatment catalog, online booking and a visual style that matches the brand.",
           stack: ["Next.js", "Framer Motion", "Tailwind v4", "Vercel"],
           impact: "Happy client",
+          url: "https://karmasalon.vercel.app/",
         },
         {
           title: "TimeTracker",
@@ -329,6 +340,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "App I use myself to track where my time goes. Timers, categories, daily charts and data export.",
           stack: ["React", "TypeScript", "Node.js", "Zustand"],
           impact: "Personal use",
+          url: "https://time-tracker-ismaeliki.vercel.app/spaces",
         },
         {
           title: "Pomodoro App",
@@ -337,6 +349,7 @@ export const siteCopy: Record<SiteLocale, SiteCopy> = {
             "Companion to TimeTracker. Pomodoro sessions with timer, auto breaks and sync with the main tracker.",
           stack: ["Next.js", "Motion", "Web API", "Tailwind"],
           impact: "Integrated with TimeTracker",
+          url: "https://pomodoro-ismaeliki.vercel.app/login",
         },
       ],
     },

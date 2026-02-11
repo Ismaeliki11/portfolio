@@ -42,6 +42,7 @@ type LiquidGlassSceneProps = {
   localeBurst?: LocaleBurst | null;
   hoveredSkill?: string | null;
   targetElementRef?: React.RefObject<HTMLElement | null>;
+  hoveredProjectElement?: HTMLElement | null;
 };
 
 function createStars(width: number, height: number, isCoarsePointer: boolean) {
@@ -74,7 +75,7 @@ function createStars(width: number, height: number, isCoarsePointer: boolean) {
   return stars;
 }
 
-export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, targetElementRef }: LiquidGlassSceneProps) {
+export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, targetElementRef, hoveredProjectElement }: LiquidGlassSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<Star[]>([]);
   const pointerRef = useRef<PointerState>({
@@ -87,6 +88,11 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
   const sizeRef = useRef({ width: 0, height: 0 });
   const previousSectionRef = useRef<string | undefined>(undefined);
   const warpEnergyRef = useRef(0);
+  const elementRef = useRef<HTMLElement | null>(null); // Bridge for the animation loop
+
+  useEffect(() => {
+    elementRef.current = hoveredProjectElement || null;
+  }, [hoveredProjectElement]);
   const burstRef = useRef<BurstState>({
     phase: "idle",
     x: 0,
@@ -162,90 +168,73 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
     pointerPresence.set(1);
   }, [localeBurst, pointerPresence, pointerX, pointerY]);
 
-  // Constellation Logic
-  const constellationRef = useRef<{ skill: string | null; points: { x: number; y: number }[] }>({
-    skill: null,
-    points: []
+  // Formation Logic (Skills or Projects)
+  const formationRef = useRef<{
+    active: boolean;
+    points: { x: number; y: number }[];
+    source: "skill" | "project" | null
+  }>({
+    active: false,
+    points: [],
+    source: null
   });
 
   useEffect(() => {
-    if (!hoveredSkill) {
-      constellationRef.current = { skill: null, points: [] };
-      return;
-    }
-
     const { width, height } = sizeRef.current;
     if (width === 0 || height === 0) return;
 
-    // Define unique constellation shapes per technology
-    const shapes: Record<string, { x: number; y: number }[]> = {
-      // Next.js — Angular "N" letterform / forward arrow
-      "Next.js": [
-        { x: -90, y: 120 }, { x: -90, y: -120 }, { x: 90, y: 120 },
-        { x: 90, y: -120 }
-      ],
-      // React 19 — Atomic orbital: two crossing ellipses
-      "React 19": [
-        { x: 0, y: -130 }, { x: 120, y: -45 }, { x: 120, y: 45 },
-        { x: 0, y: 130 }, { x: -120, y: 45 }, { x: -120, y: -45 },
-        { x: 0, y: 0 } // nucleus
-      ],
-      // Tailwind v4 — Flowing sine wave (wind current)
-      "Tailwind v4": [
-        { x: -140, y: 30 }, { x: -90, y: -50 }, { x: -30, y: 50 },
-        { x: 30, y: -50 }, { x: 90, y: 50 }, { x: 140, y: -30 }
-      ],
-      // Framer Motion — Swooping motion arc with speed trail
-      "Framer Motion": [
-        { x: -130, y: 80 }, { x: -70, y: -20 }, { x: -10, y: -90 },
-        { x: 60, y: -110 }, { x: 120, y: -70 }, { x: 130, y: 10 }
-      ],
-      // TypeScript — Angled brackets <> evoking generics/types
-      "TypeScript": [
-        { x: -50, y: -120 }, { x: -130, y: 0 }, { x: -50, y: 120 },
-        { x: 50, y: -120 }, { x: 130, y: 0 }, { x: 50, y: 120 }
-      ],
-      // Node.js — Hexagonal prism (Node hex logo, tall)
-      "Node.js": [
-        { x: 0, y: -140 }, { x: 100, y: -80 }, { x: 100, y: 60 },
-        { x: 0, y: 130 }, { x: -100, y: 60 }, { x: -100, y: -80 }
-      ],
-      // Sharp — Precise diamond blade / kite shape
-      "Sharp": [
-        { x: 0, y: -140 }, { x: 60, y: -20 }, { x: 0, y: 140 },
-        { x: -60, y: -20 }
-      ],
-      // UI/UX — Golden spiral approximation
-      "UI/UX": [
-        { x: 0, y: -10 }, { x: 50, y: -60 }, { x: 120, y: -30 },
-        { x: 130, y: 60 }, { x: 60, y: 110 }, { x: -40, y: 90 },
-        { x: -110, y: 20 }, { x: -100, y: -70 }
-      ],
-      // Vercel — Iconic triangle / delta
-      "Vercel": [
-        { x: 0, y: -130 }, { x: 120, y: 100 }, { x: -120, y: 100 }
-      ],
-      // SVGO — Bezier curve control points
-      "SVGO": [
-        { x: -130, y: 80 }, { x: -80, y: -100 }, { x: 0, y: 40 },
-        { x: 80, y: -100 }, { x: 130, y: 80 }
-      ]
-    };
+    if (!hoveredSkill && !hoveredProjectElement) {
+      formationRef.current = { active: false, points: [], source: null };
+      return;
+    }
 
-    const shape = shapes[hoveredSkill] ?? shapes["Node.js"];
+    if (hoveredSkill) {
+      // (Skill shape logic remains same - centered at Skill Reactor)
+      const shapes: Record<string, { x: number; y: number }[]> = {
+        "Next.js": [{ x: -90, y: 120 }, { x: -90, y: -120 }, { x: 90, y: 120 }, { x: 90, y: -120 }],
+        "React 19": [{ x: 0, y: -130 }, { x: 120, y: -45 }, { x: 120, y: 45 }, { x: 0, y: 130 }, { x: -120, y: 45 }, { x: -120, y: -45 }, { x: 0, y: 0 }],
+        "Tailwind v4": [{ x: -140, y: 30 }, { x: -90, y: -50 }, { x: -30, y: 50 }, { x: 30, y: -50 }, { x: 90, y: 50 }, { x: 140, y: -30 }],
+        "Framer Motion": [{ x: -130, y: 80 }, { x: -70, y: -20 }, { x: -10, y: -90 }, { x: 60, y: -110 }, { x: 120, y: -70 }, { x: 130, y: 10 }],
+        "TypeScript": [{ x: -50, y: -120 }, { x: -130, y: 0 }, { x: -50, y: 120 }, { x: 50, y: -120 }, { x: 130, y: 0 }, { x: 50, y: 120 }],
+        "Node.js": [{ x: 0, y: -140 }, { x: 100, y: -80 }, { x: 100, y: 60 }, { x: 0, y: 130 }, { x: -100, y: 60 }, { x: -100, y: -80 }],
+        "Sharp": [{ x: 0, y: -140 }, { x: 60, y: -20 }, { x: 0, y: 140 }, { x: -60, y: -20 }],
+        "UI/UX": [{ x: 0, y: -10 }, { x: 50, y: -60 }, { x: 120, y: -30 }, { x: 130, y: 60 }, { x: 60, y: 110 }, { x: -40, y: 90 }, { x: -110, y: 20 }, { x: -100, y: -70 }],
+        "Vercel": [{ x: 0, y: -130 }, { x: 120, y: 100 }, { x: -120, y: 100 }],
+        "SVGO": [{ x: -130, y: 80 }, { x: -80, y: -100 }, { x: 0, y: 40 }, { x: 80, y: -100 }, { x: 130, y: 80 }]
+      };
 
-    const shapeScale = width < 768 ? 0.65 : 1.1; // Scale shapes based on screen
+      const shape = shapes[hoveredSkill] ?? shapes["Node.js"];
+      const shapeScale = width < 768 ? 0.65 : 1.1;
 
-    // Store OFFSETS instead of absolute positions
-    // We will apply the center position dynamically in the draw loop
-    constellationRef.current = {
-      skill: hoveredSkill,
-      points: shape.map(p => ({
-        x: p.x * shapeScale,
-        y: p.y * shapeScale
-      }))
-    };
-  }, [hoveredSkill]);
+      formationRef.current = {
+        active: true,
+        source: "skill",
+        points: shape.map(p => ({ x: p.x * shapeScale, y: p.y * shapeScale }))
+      };
+    } else if (hoveredProjectElement) {
+      // Generate RELATIVE points around (0,0) based on card size
+      const rect = hoveredProjectElement.getBoundingClientRect();
+      const margin = 16;
+      const w = rect.width + margin * 2;
+      const h = rect.height + margin * 2;
+      const ox = -w / 2;
+      const oy = -h / 2;
+
+      const points: { x: number; y: number }[] = [];
+      const steps = 6;
+
+      for (let i = 0; i <= steps; i++) points.push({ x: ox + (w * i) / steps, y: oy });
+      for (let i = 1; i <= steps; i++) points.push({ x: ox + w, y: oy + (h * i) / steps });
+      for (let i = 1; i <= steps; i++) points.push({ x: ox + w - (w * i) / steps, y: oy + h });
+      for (let i = 1; i < steps; i++) points.push({ x: ox, y: oy + h - (h * i) / steps });
+
+      formationRef.current = {
+        active: true,
+        source: "project",
+        points
+      };
+    }
+  }, [hoveredSkill, hoveredProjectElement]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -431,8 +420,9 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
       }
 
       context.clearRect(0, 0, width, height);
-      const constellation = constellationRef.current;
-      if (constellation.skill) {
+      const formation = formationRef.current;
+
+      if (formation.active && formation.source === "skill") {
         context.fillStyle = "rgba(0, 0, 0, 0.45)";
         context.fillRect(0, 0, width, height);
       }
@@ -458,22 +448,29 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
         let targetY = star.baseY;
         let forceScale = 0.0038 + star.depth * 0.0018;
 
-        if (constellation.skill && index < constellation.points.length * 6) {
-          // Calculate dynamic center
-          let cx = width * (width < 768 ? 0.5 : 0.28);
-          let cy = height * 0.72;
-
-          // Use CACHED center position to avoid reflow every frame
-          if (targetCenterRef.current) {
-            cx = targetCenterRef.current.x;
-            cy = targetCenterRef.current.y;
-          }
-
+        if (formation.active && index < formation.points.length * 6) {
           const ptIdx = Math.floor(index / 6);
-          const pt = constellation.points[ptIdx];
+          const pt = formation.points[ptIdx];
+
           if (pt) {
-            targetX = cx + pt.x + (Math.random() - 0.5) * 6;
-            targetY = cy + pt.y + (Math.random() - 0.5) * 6;
+            if (formation.source === "skill") {
+              // Center at skill reactor
+              let cx = width * (width < 768 ? 0.5 : 0.28);
+              let cy = height * 0.72;
+              if (targetCenterRef.current) {
+                cx = targetCenterRef.current.x;
+                cy = targetCenterRef.current.y;
+              }
+              targetX = cx + pt.x + (Math.random() - 0.5) * 6;
+              targetY = cy + pt.y + (Math.random() - 0.5) * 6;
+            } else if (elementRef.current) {
+              // Project rect: points are relative, center is live from element ref
+              const rect = elementRef.current.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              targetX = cx + pt.x + (Math.random() - 0.5) * 6;
+              targetY = cy + pt.y + (Math.random() - 0.5) * 6;
+            }
             forceScale = 0.045 + star.depth * 0.02;
           }
         }
@@ -514,9 +511,9 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
           const distance = Math.hypot(dx, dy) || 1;
 
           if (distance < repulseRadius) {
-            // Stars in constellation ignore repulsion so they don't flee the hover
-            const isInConstellation = constellation.skill && index < constellation.points.length * 6;
-            const repulsionST = isInConstellation ? 0.1 : 1.0;
+            // Stars in formation ignore repulsion so they don't flee the hover
+            const isInFormation = formation.active && index < formation.points.length * 6;
+            const repulsionST = isInFormation ? 0.1 : 1.0;
 
             const influence = (1 - distance / repulseRadius) * (0.68 + star.depth * 0.5) * pointer.intensity;
             star.vx += (dx / distance) * influence * 2.1 * delta * pointerForceScale * repulsionST;
@@ -530,45 +527,45 @@ export function LiquidGlassScene({ activeSection, localeBurst, hoveredSkill, tar
         star.x += star.vx * delta;
         star.y += star.vy * delta;
 
-        const isInConstellation = constellation.skill && index < constellation.points.length * 6;
+        const isInFormation = formation.active && index < formation.points.length * 6;
         const twinkle = 0.72 + Math.sin(time * 0.001 * star.twinkle + star.phase) * 0.28;
-        const alpha = star.alpha * twinkle * (isInConstellation ? 1.5 : 1);
-        const size = star.size * (isInConstellation ? 2.2 : 1);
+        const alpha = star.alpha * twinkle * (isInFormation ? 1.5 : 1);
+        const size = star.size * (isInFormation ? 2.2 : 1);
 
         // Skip complex star drawing on low performance
         if (!isLowPerf && warpEnergy > 0.05) {
           const streakLength = (6 + warpEnergy * 28) * (0.55 + star.depth * 0.5);
           context.beginPath();
           context.strokeStyle = `rgba(202, 232, 255, ${alpha * 0.42 * warpEnergy})`;
-          context.lineWidth = isInConstellation ? size * 0.4 : star.size * 0.72;
+          context.lineWidth = isInFormation ? size * 0.4 : star.size * 0.72;
           context.moveTo(star.x - radialDirX * streakLength, star.y - radialDirY * streakLength);
           context.lineTo(star.x + radialDirX * streakLength * 0.24, star.y + radialDirY * streakLength * 0.24);
           context.stroke();
         }
 
         context.beginPath();
-        context.fillStyle = isInConstellation ? `rgba(160, 240, 255, ${alpha * 1.2})` : `rgba(214, 237, 255, ${alpha})`;
+        context.fillStyle = isInFormation ? `rgba(160, 240, 255, ${alpha * 1.2})` : `rgba(214, 237, 255, ${alpha})`;
         context.arc(star.x, star.y, size, 0, Math.PI * 2);
         context.fill();
 
-        if (!isLowPerf && (pointer.intensity > 0.01 || isInConstellation)) {
+        if (!isLowPerf && (pointer.intensity > 0.01 || isInFormation)) {
           const distanceToPointer = Math.hypot(star.x - pointer.x, star.y - pointer.y);
-          const glowRadius = isInConstellation ? size * 5.2 : repulseRadius * 0.7;
+          const glowRadius = isInFormation ? size * 5.2 : repulseRadius * 0.7;
 
-          if (isInConstellation || distanceToPointer < glowRadius) {
-            const glow = isInConstellation ? 0.6 : (1 - distanceToPointer / glowRadius) * 0.7 * pointer.intensity * pointerForceScale;
+          if (isInFormation || distanceToPointer < glowRadius) {
+            const glow = isInFormation ? 0.6 : (1 - distanceToPointer / glowRadius) * 0.7 * pointer.intensity * pointerForceScale;
             context.beginPath();
-            // Reduce glow opacity for constellation to prevent blob effect
-            context.fillStyle = `rgba(138, 228, 255, ${glow * (isInConstellation ? 0.15 : 0.35)})`;
-            context.arc(star.x, star.y, size * (isInConstellation ? 4.0 : 4.8), 0, Math.PI * 2);
+            // Reduce glow opacity for formation to prevent blob effect
+            context.fillStyle = `rgba(138, 228, 255, ${glow * (isInFormation ? 0.15 : 0.35)})`;
+            context.arc(star.x, star.y, size * (isInFormation ? 4.0 : 4.8), 0, Math.PI * 2);
             context.fill();
           }
         }
 
         // Connect constellation stars with lines
-        if (constellation.skill && index < constellation.points.length * 6 && index % 6 === 0) {
+        if (formation.active && formation.source === "skill" && index < formation.points.length * 6 && index % 6 === 0) {
           const ptIdx = index / 6;
-          const nextIdx = (ptIdx + 1) % constellation.points.length;
+          const nextIdx = (ptIdx + 1) % formation.points.length;
           const nextStar = stars[(nextIdx * 6)];
 
           if (nextStar) {
