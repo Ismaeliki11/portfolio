@@ -741,16 +741,16 @@ export function PortfolioExperience() {
                                 className="mt-3 text-center text-[10px] leading-relaxed tracking-[0.08em] text-[#6a84aa]"
                               >
                                 {{
-                                  "Next.js": "Letra N \u2014 Identidad tipogr\u00e1fica del framework",
-                                  "React 19": "Orbital at\u00f3mico \u2014 Electrones en \u00f3rbita, como sus componentes",
-                                  "Tailwind v4": "Onda de viento \u2014 Flujo utility-first como corriente de aire",
-                                  "Framer Motion": "Arco cin\u00e9tico \u2014 Trayectoria de animaci\u00f3n en movimiento",
-                                  "TypeScript": "Brackets <> \u2014 Los gen\u00e9ricos que definen el tipado",
-                                  "Node.js": "Prisma hexagonal \u2014 El ic\u00f3nico hex\u00e1gono del runtime",
-                                  "Sharp": "Hoja de diamante \u2014 Precisi\u00f3n en procesamiento de imagen",
-                                  "UI/UX": "Espiral \u00e1urea \u2014 La proporci\u00f3n que gu\u00eda todo buen dise\u00f1o",
-                                  "Vercel": "Tri\u00e1ngulo delta \u2014 El s\u00edmbolo de deploy instant\u00e1neo",
-                                  "SVGO": "Curva B\u00e9zier \u2014 Puntos de control que definen un SVG"
+                                  "Next.js": "Forma de N — por el nombre del framework",
+                                  "React 19": "Orbitas cruzadas — como los electrones del logo",
+                                  "Tailwind v4": "Onda suave — como el viento del nombre",
+                                  "Framer Motion": "Arco en movimiento — una animacion en el aire",
+                                  "TypeScript": "Angulos <> — los brackets de los tipos",
+                                  "Node.js": "Hexagono — el logo clasico de Node",
+                                  "Sharp": "Rombo afilado — corte limpio, como la herramienta",
+                                  "UI/UX": "Espiral — la proporcion aurea del diseno",
+                                  "Vercel": "Triangulo — el logo de Vercel",
+                                  "SVGO": "Curva con puntos — como un path de SVG"
                                 }[hoveredSkill] ?? ""}
                               </motion.p>
                             </div>
